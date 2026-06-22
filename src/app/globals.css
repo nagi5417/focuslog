@@ -1,0 +1,921 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ホバー可能なデバイス（マウス等）でのみ適用する variant。
+   タッチデバイスでは can-hover:* が無効化され、操作ボタンは常時表示にフォールバックする。 */
+@custom-variant can-hover (@media (hover: hover));
+
+/* ================================================================
+   focuslog Design Tokens  (handoff: /Downloads/design_handoff_focuslog/src/styles.css)
+   --fl-* = focuslog raw tokens（shadcn との名前衝突を避けるためプレフィックス付き）
+   ================================================================ */
+
+/* Light mode (default) */
+:root {
+  /* ---- Backgrounds ---- */
+  --fl-bg: #fafaf9;
+  --fl-bg-elevated: #ffffff;
+  --fl-panel: #ffffff;
+  --fl-panel-2: #f4f4f5;
+  --fl-hover: #f1f1f2;
+
+  /* ---- Borders ---- */
+  --fl-border: #e4e4e7;
+  --fl-border-strong: #d4d4d8;
+  --fl-border-subtle: #ebebee;
+
+  /* ---- Text ---- */
+  --fl-text: #09090b;
+  --fl-text-2: #27272a;
+  --fl-text-muted: #64646b;
+  --fl-text-subtle: #a1a1aa;
+
+  /* ---- Brand (blue default) ---- */
+  --fl-brand: #2563eb;
+  --fl-brand-2: #3b82f6;
+  --fl-brand-dim: #dbeafe;
+  --fl-brand-ghost: rgba(37, 99, 235, 0.1);
+  --fl-brand-glow: rgba(37, 99, 235, 0.25);
+  --fl-on-brand: #ffffff;
+
+  /* ---- Priority ---- */
+  --fl-pri-high: #dc2626;
+  --fl-pri-high-bg: rgba(220, 38, 38, 0.1);
+  --fl-pri-mid: #ca8a04;
+  --fl-pri-mid-bg: rgba(202, 138, 4, 0.12);
+  --fl-pri-low: #2563eb;
+  --fl-pri-low-bg: rgba(37, 99, 235, 0.1);
+
+  /* ---- Misc ---- */
+  --fl-danger: #dc2626;
+  --fl-shadow-lg:
+    0 16px 32px -12px rgba(0, 0, 0, 0.1), 0 4px 12px -4px rgba(0, 0, 0, 0.06);
+  --fl-shadow-md: 0 4px 12px -4px rgba(0, 0, 0, 0.06);
+  --fl-grid-line: rgba(0, 0, 0, 0.04);
+  --fl-grid-line-strong: rgba(0, 0, 0, 0.08);
+
+  /* ---- Tag 8-color palette ---- */
+  --fl-tag-review: #059669;
+  --fl-tag-design: #a78bfa;
+  --fl-tag-backend: #3b82f6;
+  --fl-tag-docs: #64748b;
+  --fl-tag-admin: #f97316;
+  --fl-tag-ops: #0891b2;
+  --fl-tag-research: #d97706;
+  --fl-tag-cs: #e11d48;
+
+  /* ================================================================
+     shadcn Compatibility — focuslog トークンへ再マッピング
+     ================================================================ */
+  --background: var(--fl-bg);
+  --foreground: var(--fl-text);
+  --card: var(--fl-panel);
+  --card-foreground: var(--fl-text);
+  --popover: var(--fl-bg-elevated);
+  --popover-foreground: var(--fl-text);
+  --primary: var(--fl-brand);
+  --primary-foreground: var(--fl-on-brand);
+  --secondary: var(--fl-panel-2);
+  --secondary-foreground: var(--fl-text-2);
+  --muted: var(--fl-panel-2);
+  --muted-foreground: var(--fl-text-muted);
+  --accent: var(--fl-hover);
+  --accent-foreground: var(--fl-text-2);
+  --destructive: var(--fl-danger);
+  --border: var(--fl-border);
+  --input: var(--fl-border-strong);
+  --ring: var(--fl-brand-ghost);
+  --radius: 0.625rem;
+
+  --sidebar: var(--fl-panel);
+  --sidebar-foreground: var(--fl-text);
+  --sidebar-primary: var(--fl-brand);
+  --sidebar-primary-foreground: var(--fl-on-brand);
+  --sidebar-accent: var(--fl-hover);
+  --sidebar-accent-foreground: var(--fl-text-2);
+  --sidebar-border: var(--fl-border);
+  --sidebar-ring: var(--fl-brand-ghost);
+
+  --chart-1: var(--fl-brand);
+  --chart-2: var(--fl-pri-low);
+  --chart-3: #a78bfa;
+  --chart-4: #f97316;
+  --chart-5: var(--fl-pri-high);
+}
+
+/* Dark mode */
+.dark {
+  --fl-bg: #0a0a0b;
+  --fl-bg-elevated: #111114;
+  --fl-panel: #131316;
+  --fl-panel-2: #18181c;
+  --fl-hover: #1e1e23;
+
+  --fl-border: #26262c;
+  --fl-border-strong: #34343c;
+  --fl-border-subtle: #1c1c20;
+
+  --fl-text: #fafafb;
+  --fl-text-2: #d4d4d8;
+  --fl-text-muted: #a3a3aa;
+  --fl-text-subtle: #71717a;
+
+  --fl-brand: #3b82f6;
+  --fl-brand-2: #60a5fa;
+  --fl-brand-dim: #1e3a8a;
+  --fl-brand-ghost: rgba(59, 130, 246, 0.12);
+  --fl-brand-glow: rgba(59, 130, 246, 0.35);
+  --fl-on-brand: #ffffff;
+
+  --fl-pri-high: #ef4444;
+  --fl-pri-high-bg: rgba(239, 68, 68, 0.12);
+  --fl-pri-mid: #eab308;
+  --fl-pri-mid-bg: rgba(234, 179, 8, 0.13);
+  --fl-pri-low: #3b82f6;
+  --fl-pri-low-bg: rgba(59, 130, 246, 0.13);
+
+  --fl-danger: #ef4444;
+  --fl-shadow-lg:
+    0 24px 48px -16px rgba(0, 0, 0, 0.6), 0 8px 24px -8px rgba(0, 0, 0, 0.4);
+  --fl-shadow-md: 0 8px 24px -8px rgba(0, 0, 0, 0.4);
+  --fl-grid-line: rgba(255, 255, 255, 0.04);
+  --fl-grid-line-strong: rgba(255, 255, 255, 0.08);
+
+  /* shadcn compat (dark overrides) */
+  --background: var(--fl-bg);
+  --foreground: var(--fl-text);
+  --card: var(--fl-panel);
+  --card-foreground: var(--fl-text);
+  --popover: var(--fl-bg-elevated);
+  --popover-foreground: var(--fl-text);
+  --primary: var(--fl-brand);
+  --primary-foreground: var(--fl-on-brand);
+  --secondary: var(--fl-panel-2);
+  --secondary-foreground: var(--fl-text-2);
+  --muted: var(--fl-panel-2);
+  --muted-foreground: var(--fl-text-muted);
+  --accent: var(--fl-hover);
+  --accent-foreground: var(--fl-text-2);
+  --destructive: var(--fl-danger);
+  --border: var(--fl-border);
+  --input: var(--fl-border-strong);
+  --ring: var(--fl-brand-ghost);
+
+  --sidebar: var(--fl-panel);
+  --sidebar-foreground: var(--fl-text);
+  --sidebar-primary: var(--fl-brand);
+  --sidebar-primary-foreground: var(--fl-on-brand);
+  --sidebar-accent: var(--fl-hover);
+  --sidebar-accent-foreground: var(--fl-text-2);
+  --sidebar-border: var(--fl-border);
+  --sidebar-ring: var(--fl-brand-ghost);
+
+  --chart-1: var(--fl-brand);
+  --chart-2: var(--fl-pri-low);
+  --chart-3: #c4b5fd;
+  --chart-4: #fb923c;
+  --chart-5: var(--fl-pri-high);
+}
+
+/* ---- Accent: blue ---- */
+[data-accent="blue"] {
+  --fl-brand: #3b82f6;
+  --fl-brand-2: #60a5fa;
+  --fl-brand-dim: #1e3a8a;
+  --fl-brand-ghost: rgba(59, 130, 246, 0.12);
+  --fl-brand-glow: rgba(59, 130, 246, 0.35);
+  --fl-on-brand: #ffffff;
+  --primary: var(--fl-brand);
+  --ring: var(--fl-brand-ghost);
+}
+:root:not(.dark)[data-accent="blue"] {
+  --fl-brand: #2563eb;
+  --fl-brand-2: #3b82f6;
+  --fl-brand-dim: #dbeafe;
+  --fl-brand-ghost: rgba(37, 99, 235, 0.1);
+  --fl-brand-glow: rgba(37, 99, 235, 0.25);
+  --fl-on-brand: #ffffff;
+  --primary: var(--fl-brand);
+  --ring: var(--fl-brand-ghost);
+}
+
+/* ---- Accent: orange ---- */
+[data-accent="orange"] {
+  --fl-brand: #f97316;
+  --fl-brand-2: #fb923c;
+  --fl-brand-dim: #7c2d12;
+  --fl-brand-ghost: rgba(249, 115, 22, 0.13);
+  --fl-brand-glow: rgba(249, 115, 22, 0.4);
+  --fl-on-brand: #1a0a02;
+  --primary: var(--fl-brand);
+  --ring: var(--fl-brand-ghost);
+}
+:root:not(.dark)[data-accent="orange"] {
+  --fl-brand: #ea580c;
+  --fl-brand-2: #f97316;
+  --fl-brand-dim: #ffedd5;
+  --fl-brand-ghost: rgba(234, 88, 12, 0.1);
+  --fl-brand-glow: rgba(234, 88, 12, 0.25);
+  --fl-on-brand: #ffffff;
+  --primary: var(--fl-brand);
+  --ring: var(--fl-brand-ghost);
+}
+
+/* ---- Accent: violet ---- */
+[data-accent="violet"] {
+  --fl-brand: #a78bfa;
+  --fl-brand-2: #c4b5fd;
+  --fl-brand-dim: #4c1d95;
+  --fl-brand-ghost: rgba(167, 139, 250, 0.13);
+  --fl-brand-glow: rgba(167, 139, 250, 0.4);
+  --fl-on-brand: #1a0033;
+  --primary: var(--fl-brand);
+  --ring: var(--fl-brand-ghost);
+}
+:root:not(.dark)[data-accent="violet"] {
+  --fl-brand: #7c3aed;
+  --fl-brand-2: #a78bfa;
+  --fl-brand-dim: #ede9fe;
+  --fl-brand-ghost: rgba(124, 58, 237, 0.1);
+  --fl-brand-glow: rgba(124, 58, 237, 0.25);
+  --fl-on-brand: #ffffff;
+  --primary: var(--fl-brand);
+  --ring: var(--fl-brand-ghost);
+}
+
+/* ================================================================
+   @theme inline — focuslog カスタム Tailwind ユーティリティ登録
+   bg-panel / text-text-muted / border-border-strong 等を使えるようにする
+   ================================================================ */
+@theme inline {
+  /* shadcn standard */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-geist-sans);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* focuslog layout tokens → bg-panel, bg-panel-2, bg-hover etc. */
+  --color-panel: var(--fl-panel);
+  --color-panel-2: var(--fl-panel-2);
+  --color-hover: var(--fl-hover);
+  --color-border-strong: var(--fl-border-strong);
+  --color-border-subtle: var(--fl-border-subtle);
+
+  /* focuslog text tokens → text-text-2, text-text-muted, text-text-subtle */
+  --color-text-2: var(--fl-text-2);
+  --color-text-muted: var(--fl-text-muted);
+  --color-text-subtle: var(--fl-text-subtle);
+
+  /* focuslog brand tokens → bg-brand, text-brand, bg-brand-ghost etc. */
+  --color-brand: var(--fl-brand);
+  --color-brand-2: var(--fl-brand-2);
+  --color-brand-dim: var(--fl-brand-dim);
+  --color-brand-ghost: var(--fl-brand-ghost);
+  --color-brand-glow: var(--fl-brand-glow);
+  --color-on-brand: var(--fl-on-brand);
+
+  /* focuslog priority tokens → text-pri-high, bg-pri-high etc. */
+  --color-pri-high: var(--fl-pri-high);
+  --color-pri-mid: var(--fl-pri-mid);
+  --color-pri-low: var(--fl-pri-low);
+  --color-danger: var(--fl-danger);
+
+  /* focuslog tag 8-color tokens → bg-tag-review etc. */
+  --color-tag-review: var(--fl-tag-review);
+  --color-tag-design: var(--fl-tag-design);
+  --color-tag-backend: var(--fl-tag-backend);
+  --color-tag-docs: var(--fl-tag-docs);
+  --color-tag-admin: var(--fl-tag-admin);
+  --color-tag-ops: var(--fl-tag-ops);
+  --color-tag-research: var(--fl-tag-research);
+  --color-tag-cs: var(--fl-tag-cs);
+}
+
+/* ================================================================
+   Base styles
+   ================================================================ */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    background: var(--fl-bg);
+    color: var(--fl-text);
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    font-size: 13.5px;
+    letter-spacing: -0.005em;
+    overflow: hidden;
+  }
+  html {
+    @apply font-sans;
+    height: 100%;
+  }
+  ::selection {
+    background: var(--fl-brand-ghost);
+    color: var(--fl-text);
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: var(--fl-border-strong);
+    border-radius: 8px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: var(--fl-text-subtle);
+    background-clip: content-box;
+    border: 2px solid transparent;
+  }
+}
+
+/* ================================================================
+   Keyframe animations（handoff 由来）
+   ================================================================ */
+@keyframes timer-pulse {
+  0% {
+    box-shadow: 0 0 0 0 var(--fl-brand-glow);
+  }
+  70% {
+    box-shadow: 0 0 0 8px transparent;
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes flip-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ================================================================
+   Reports — レポート画面専用スタイル
+   ハンドオフ: /Downloads/design_handoff_focuslog/src/styles.css から移植
+   変数は --fl-* トークンに変換済み
+   ================================================================ */
+
+/* ---- ツールバー ---- */
+.reports-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 28px;
+  border-bottom: 1px solid var(--fl-border-subtle);
+  flex-wrap: wrap;
+}
+
+.tabs {
+  display: flex;
+  gap: 2px;
+  background: var(--fl-panel-2);
+  border: 1px solid var(--fl-border);
+  border-radius: 8px;
+  padding: 3px;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--fl-text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition:
+    background 80ms,
+    color 80ms;
+}
+
+.tab:hover {
+  background: var(--fl-hover);
+  color: var(--fl-text);
+}
+
+.tab.active {
+  background: var(--fl-panel);
+  color: var(--fl-text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.range-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.range-nav button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--fl-border);
+  background: transparent;
+  color: var(--fl-text-muted);
+  cursor: pointer;
+  transition:
+    background 80ms,
+    color 80ms;
+}
+
+.range-nav button:hover {
+  background: var(--fl-hover);
+  color: var(--fl-text);
+}
+
+.range-label {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--fl-text);
+  padding: 0 8px;
+  font-family: "Geist Mono", ui-monospace, monospace;
+  min-width: 160px;
+  text-align: center;
+}
+
+/* ---- 統計カード ---- */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  padding: 16px 28px;
+}
+
+.stats-grid.stats-grid-2 {
+  grid-template-columns: repeat(2, minmax(0, 280px));
+}
+
+.stat-card {
+  background: var(--fl-panel);
+  border: 1px solid var(--fl-border);
+  border-radius: 9px;
+  padding: 14px 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card .label {
+  font-size: 10.5px;
+  color: var(--fl-text-muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-family: "Geist Mono", ui-monospace, monospace;
+}
+
+.stat-card .value {
+  font-size: 24px;
+  font-weight: 500;
+  color: var(--fl-text);
+  font-family: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.stat-card .unit {
+  font-size: 13px;
+  color: var(--fl-text-muted);
+  font-weight: 400;
+}
+
+.stat-card .delta {
+  font-size: 11px;
+  margin-top: 4px;
+  font-family: "Geist Mono", ui-monospace, monospace;
+}
+
+.stat-card .delta.up {
+  color: var(--fl-brand);
+}
+
+.stat-card .delta.down {
+  color: var(--fl-pri-high);
+}
+
+.stat-card .sparkline {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  width: 64px;
+  height: 22px;
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* ---- 週ビュー ---- */
+.week-view {
+  margin: 0 28px 24px;
+  background: var(--fl-panel);
+  border: 1px solid var(--fl-border);
+  border-radius: 10px;
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  overflow: hidden;
+}
+
+.week-day-head {
+  grid-column: 2;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  border-bottom: 1px solid var(--fl-border);
+  background: var(--fl-panel-2);
+  position: sticky;
+  top: 0;
+  z-index: 4;
+}
+
+.week-day {
+  padding: 10px 8px;
+  border-right: 1px solid var(--fl-border-subtle);
+  text-align: left;
+}
+
+.week-day:last-child {
+  border-right: 0;
+}
+
+.week-day .dow {
+  font-size: 10.5px;
+  color: var(--fl-text-muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-weight: 500;
+}
+
+.week-day .num {
+  font-size: 16px;
+  color: var(--fl-text);
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+.week-day.today .num {
+  color: var(--fl-brand);
+}
+
+.week-day.today .num::after {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--fl-brand);
+  margin-left: 6px;
+  vertical-align: middle;
+  box-shadow: 0 0 8px var(--fl-brand-glow);
+}
+
+.week-day .hrs {
+  font-size: 11px;
+  color: var(--fl-text-2);
+  font-family: "Geist Mono", ui-monospace, monospace;
+  margin-top: 2px;
+  font-weight: 500;
+}
+
+/* ---- 共通グリッド（週/日ビュー共通）---- */
+.hours-col {
+  grid-column: 1;
+  grid-row: 2;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--fl-border);
+}
+
+.hour-tick {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  padding-top: 2px;
+  padding-right: 8px;
+  justify-content: flex-end;
+  font-size: 10px;
+  color: var(--fl-text-subtle);
+  font-family: "Geist Mono", ui-monospace, monospace;
+  border-top: 1px solid var(--fl-grid-line);
+  box-sizing: border-box;
+}
+
+.hour-tick:first-child {
+  border-top: 0;
+}
+
+.grid-area {
+  grid-column: 2;
+  grid-row: 2;
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 35px,
+    var(--fl-grid-line) 35px,
+    var(--fl-grid-line) 36px
+  );
+}
+
+.day-col {
+  border-right: 1px solid var(--fl-border-subtle);
+  position: relative;
+  min-height: calc(36px * 24);
+}
+
+.day-col:last-child {
+  border-right: 0;
+}
+
+.day-col.today {
+  background: linear-gradient(
+    180deg,
+    var(--fl-brand-ghost) 0%,
+    transparent 30%
+  );
+}
+
+/* ---- 日ビュー ---- */
+.day-view {
+  margin: 0 28px 24px;
+  background: var(--fl-panel);
+  border: 1px solid var(--fl-border);
+  border-radius: 10px;
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  overflow: hidden;
+}
+
+.day-view .grid-area {
+  grid-template-columns: 1fr;
+  min-height: calc(56px * 24);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 55px,
+    var(--fl-grid-line) 55px,
+    var(--fl-grid-line) 56px
+  );
+}
+
+.day-view .day-col {
+  min-height: calc(56px * 24);
+  border-right: 0;
+}
+
+.day-view .hour-tick {
+  height: 56px;
+}
+
+/* ---- タイムラインブロック ---- */
+.block {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  border-radius: 4px;
+  padding: 4px 6px 4px 9px; /* 左を +3px、色帯ぶんの余白を確保 */
+  font-size: 10.5px;
+  color: var(--fl-text); /* 白文字固定 → 通常テキスト色 */
+  cursor: pointer;
+  transition:
+    transform 100ms,
+    box-shadow 100ms,
+    border-color 100ms;
+  background: var(--fl-panel-2); /* 濃いグラデーション → ニュートラル淡背景 */
+  border: 1px solid var(--fl-border); /* 白前提ボーダー → トークン */
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* 左 3px の色帯。border ではなく ::before で描くことで
+   hover 時の border-color 変更と干渉させない */
+.block::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  border-radius: 4px 0 0 4px;
+  background: var(--fl-text-subtle); /* 既定。各 c-* で上書き */
+}
+
+.block:hover {
+  transform: translateY(-1px);
+  z-index: 5;
+  box-shadow: var(--fl-shadow-md);
+  border-color: var(--fl-border-strong); /* 白 rgba → トークン */
+}
+
+.block .b-title {
+  font-weight: 500;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.block .b-meta {
+  font-size: 10px;
+  color: var(--fl-text-muted); /* 白前提の opacity → ミュートテキスト色 */
+  margin-top: 2px;
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-weight: 500;
+}
+
+.block.tiny {
+  padding: 2px 5px;
+}
+
+.block.tiny .b-meta {
+  display: none;
+}
+
+/* ブロック 8色 — 濃いグラデーション塗り → 左色帯（::before）のみに */
+.block.c-emerald::before {
+  background: #10b981;
+}
+.block.c-blue::before {
+  background: #3b82f6;
+}
+.block.c-violet::before {
+  background: #8b5cf6;
+}
+.block.c-orange::before {
+  background: #f97316;
+}
+.block.c-rose::before {
+  background: #f43f5e;
+}
+.block.c-cyan::before {
+  background: #06b6d4;
+}
+.block.c-amber::before {
+  background: #f59e0b;
+}
+.block.c-slate::before {
+  background: #64748b;
+}
+
+/* ---- Now Line ---- */
+.now-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.now-line::before {
+  content: "";
+  position: absolute;
+  left: -4px;
+  top: -3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--fl-brand);
+  box-shadow: 0 0 6px var(--fl-brand-glow);
+}
+
+.now-line::after {
+  content: "";
+  position: absolute;
+  left: 2px;
+  right: 0;
+  top: -0.75px;
+  height: 1.5px;
+  background: var(--fl-brand);
+  opacity: 0.9;
+}
+
+/* ---- 編集ポップオーバー ---- */
+.edit-pop {
+  width: 280px;
+  background: var(--fl-panel);
+  border: 1px solid var(--fl-border-strong);
+  border-radius: 10px;
+  padding: 16px;
+  box-shadow: var(--fl-shadow-lg);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.edit-pop h4 {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fl-text-muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-family: "Geist Mono", ui-monospace, monospace;
+  margin: 0;
+}
+
+.edit-pop .field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.edit-pop label {
+  font-size: 11px;
+  color: var(--fl-text-muted);
+  font-weight: 500;
+}
+
+.edit-pop input,
+.edit-pop select {
+  width: 100%;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 6px;
+  border: 1px solid var(--fl-border-strong);
+  background: var(--fl-panel-2);
+  color: var(--fl-text);
+  font-size: 12.5px;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 80ms;
+}
+
+.edit-pop input:focus,
+.edit-pop select:focus {
+  border-color: var(--fl-brand);
+}
+
+.edit-pop input.mono {
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 13px;
+}

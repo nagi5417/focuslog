@@ -89,7 +89,7 @@ export function EditPopover({ block, anchor, onClose, onSave }: Props) {
         {block.title}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+      <div className="edit-pop-time-grid">
         <div className="field">
           <label>開始</label>
           <input

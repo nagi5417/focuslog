@@ -919,3 +919,55 @@
   font-family: "Geist Mono", ui-monospace, monospace;
   font-size: 13px;
 }
+
+/* ---- モバイル: レポート画面を画面幅に収める ---- */
+@media (max-width: 640px) {
+  .reports-toolbar {
+    padding: 12px 16px;
+    gap: 8px;
+  }
+
+  .range-label {
+    min-width: 0;
+  }
+
+  .stats-grid {
+    padding: 12px 16px;
+  }
+
+  /* 左の時刻列とマージンを詰め、7列すべてを画面内に収める */
+  .week-view,
+  .day-view {
+    margin: 0 12px 16px;
+    grid-template-columns: 40px 1fr;
+  }
+
+  .week-day {
+    padding: 8px 3px;
+    text-align: center;
+  }
+
+  .week-day .dow {
+    font-size: 9px;
+    letter-spacing: 0.04em;
+  }
+
+  .week-day .num {
+    font-size: 13px;
+  }
+
+  .week-day .hrs {
+    font-size: 9.5px;
+  }
+
+  .week-day.today .num::after {
+    width: 4px;
+    height: 4px;
+    margin-left: 3px;
+  }
+
+  .hour-tick {
+    font-size: 9px;
+    padding-right: 5px;
+  }
+}

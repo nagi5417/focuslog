@@ -134,10 +134,10 @@ export function TasksPageClient({
     <div className="flex flex-col h-full overflow-hidden">
       {/* ページヘッダー */}
       <div
-        className="flex items-start justify-between px-6 pt-5 pb-4 border-b shrink-0"
+        className="flex flex-col gap-3 px-4 pt-4 pb-3 border-b shrink-0 sm:flex-row sm:items-start sm:justify-between sm:gap-4 sm:px-6 sm:pt-5 sm:pb-4"
         style={{ borderColor: "var(--fl-border)" }}
       >
-        <div>
+        <div className="min-w-0">
           <h1 className="flex items-baseline gap-2 text-[18px] font-[600] tracking-[-0.02em] text-[var(--fl-text)]">
             タスク
             <span className="text-[12px] font-[400] text-[var(--fl-text-subtle)] tracking-normal">
@@ -149,13 +149,13 @@ export function TasksPageClient({
             計測 {fmtShort(totalElapsed)}
           </p>
         </div>
-        <div className="flex items-center gap-2 mt-0.5">
+        <div className="flex items-center gap-2 sm:mt-0.5">
           {/* 優先度フィルタ */}
           <Popover>
             <PopoverTrigger asChild>
               <button
                 className={cn(
-                  "flex items-center gap-1.5 h-[30px] px-3 rounded-[7px] border text-[12px] font-[500] transition-colors duration-[80ms] cursor-pointer hover:bg-[var(--fl-hover)]",
+                  "flex shrink-0 items-center gap-1.5 h-[30px] px-3 rounded-[7px] border text-[12px] font-[500] transition-colors duration-[80ms] cursor-pointer hover:bg-[var(--fl-hover)]",
                   priorityFilter.size > 0
                     ? "text-[var(--fl-text)] border-[var(--fl-brand)]"
                     : "text-[var(--fl-text-muted)]",
@@ -208,21 +208,24 @@ export function TasksPageClient({
           {/* 検索 */}
           {searchOpen ? (
             <div
-              className="flex items-center gap-1.5 h-[30px] px-2.5 rounded-[7px] border"
+              className="flex flex-1 min-w-0 items-center gap-1.5 h-[30px] px-2.5 rounded-[7px] border sm:flex-none"
               style={{ borderColor: "var(--fl-border)" }}
             >
-              <Search size={13} className="text-[var(--fl-text-subtle)]" />
+              <Search
+                size={13}
+                className="shrink-0 text-[var(--fl-text-subtle)]"
+              />
               <input
                 ref={searchRef}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={(e) => e.key === "Escape" && closeSearch()}
                 placeholder="タイトルで検索…"
-                className="w-[160px] bg-transparent text-[12px] text-[var(--fl-text)] placeholder:text-[var(--fl-text-subtle)] outline-none"
+                className="w-full min-w-0 bg-transparent text-[12px] text-[var(--fl-text)] placeholder:text-[var(--fl-text-subtle)] outline-none sm:w-[160px]"
               />
               <button
                 onClick={closeSearch}
-                className="text-[var(--fl-text-subtle)] hover:text-[var(--fl-text)] cursor-pointer"
+                className="shrink-0 text-[var(--fl-text-subtle)] hover:text-[var(--fl-text)] cursor-pointer"
                 aria-label="検索を閉じる"
               >
                 <X size={13} />
@@ -234,12 +237,12 @@ export function TasksPageClient({
                 setSearchOpen(true);
                 requestAnimationFrame(() => searchRef.current?.focus());
               }}
-              className="flex items-center gap-1.5 h-[30px] px-3 rounded-[7px] border text-[12px] font-[500] text-[var(--fl-text-muted)] hover:bg-[var(--fl-hover)] transition-colors duration-[80ms] cursor-pointer"
+              className="flex shrink-0 items-center gap-1.5 h-[30px] px-3 rounded-[7px] border text-[12px] font-[500] text-[var(--fl-text-muted)] hover:bg-[var(--fl-hover)] transition-colors duration-[80ms] cursor-pointer"
               style={{ borderColor: "var(--fl-border)" }}
             >
               <Search size={13} />
               検索
-              <kbd className="ml-0.5 inline-flex items-center justify-center h-[16px] px-1 rounded-[3px] border border-[var(--fl-border-strong)] font-mono text-[9px] text-[var(--fl-text-subtle)]">
+              <kbd className="ml-0.5 hidden sm:inline-flex items-center justify-center h-[16px] px-1 rounded-[3px] border border-[var(--fl-border-strong)] font-mono text-[9px] text-[var(--fl-text-subtle)]">
                 ⌘K
               </kbd>
             </button>
@@ -248,7 +251,7 @@ export function TasksPageClient({
           {/* 新規タスク */}
           <button
             onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-1.5 h-[30px] px-3 rounded-[7px] text-[12px] font-[500] cursor-pointer transition-colors duration-[80ms]"
+            className="flex shrink-0 items-center gap-1.5 h-[30px] px-3 rounded-[7px] text-[12px] font-[500] cursor-pointer transition-colors duration-[80ms]"
             style={{
               background: "var(--fl-brand)",
               color: "var(--fl-on-brand)",
@@ -263,7 +266,7 @@ export function TasksPageClient({
       {/* メインコンテンツ */}
       <div
         data-testid="tasks-scroll-container"
-        className="flex-1 overflow-y-auto px-6 py-4 space-y-3"
+        className="flex-1 overflow-y-auto px-4 py-4 space-y-3 sm:px-6"
       >
         {/* 今日のタスク */}
         <SectionCard title="今日のタスク" count={today.length} defaultOpen>

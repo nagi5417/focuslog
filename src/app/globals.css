@@ -929,8 +929,15 @@
 
 .edit-pop .field {
   display: flex;
+  min-width: 0;
   flex-direction: column;
   gap: 5px;
+}
+
+.edit-pop-time-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .edit-pop label {
@@ -966,6 +973,14 @@
 
 /* ---- モバイル: レポート画面を画面幅に収める ---- */
 @media (max-width: 640px) {
+  .edit-pop {
+    width: min(280px, calc(100vw - 24px));
+  }
+
+  .edit-pop-time-grid {
+    grid-template-columns: 1fr;
+  }
+
   .reports-toolbar {
     padding: 12px 16px;
     gap: 8px;

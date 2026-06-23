@@ -13,17 +13,17 @@ function createPoints(count: number): ReportSeriesPoint[] {
 
 describe("SummaryChart", () => {
   it("週次相当の点数ではカード幅内で伸縮すること", () => {
-    render(<SummaryChart points={createPoints(7)} />);
+    render(<SummaryChart points={createPoints(7)} period="week" />);
 
     expect(screen.getByTestId("summary-chart-bars")).not.toHaveStyle({
-      width: "238px",
+      width: "1054px",
     });
   });
 
-  it("月次相当の点数では横スクロール用の内部幅を確保すること", () => {
-    render(<SummaryChart points={createPoints(31)} />);
+  it("月次の推移だけ横スクロール用の内部幅を確保すること", () => {
+    render(<SummaryChart points={createPoints(31)} period="month" />);
 
-    expect(screen.getByTestId("summary-chart-scroll")).toHaveClass(
+    expect(screen.getByTestId("summary-chart-frame")).toHaveClass(
       "overflow-x-auto",
     );
     expect(screen.getByTestId("summary-chart-bars")).toHaveStyle({

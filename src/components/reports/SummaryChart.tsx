@@ -1,14 +1,15 @@
 import { fmtShort } from "@/lib/format";
-import type { ReportSeriesPoint } from "@/types";
+import type { ReportPeriod, ReportSeriesPoint } from "@/types";
 
 type Props = {
   points: ReportSeriesPoint[];
+  period: ReportPeriod;
 };
 
-export function SummaryChart({ points }: Props) {
+export function SummaryChart({ points, period }: Props) {
   const max = Math.max(...points.map((point) => point.seconds), 1);
-  const shouldScroll = points.length > 14;
-  const chartWidth = shouldScroll ? points.length * 34 : undefined;
+  const isMonthly = period === "month";
+  const chartWidth = isMonthly ? points.length * 34 : undefined;
 
   return (
     <div className="min-w-0 rounded-[9px] border border-[var(--fl-border)] bg-[var(--fl-panel)] p-4">
@@ -16,11 +17,19 @@ export function SummaryChart({ points }: Props) {
         推移
       </div>
       <div
-        className="-mx-1 overflow-x-auto overflow-y-hidden px-1 pb-1"
-        data-testid="summary-chart-scroll"
+        className={
+          isMonthly
+            ? "-mx-1 overflow-x-auto overflow-y-hidden px-1 pb-1"
+            : "min-w-0 overflow-hidden pb-1"
+        }
+        data-testid="summary-chart-frame"
       >
         <div
-          className="flex h-[150px] min-w-full items-end gap-1.5"
+          className={
+            isMonthly
+              ? "flex h-[150px] min-w-full items-end gap-1.5"
+              : "flex h-[150px] min-w-0 items-end gap-1.5"
+          }
           data-testid="summary-chart-bars"
           style={{ width: chartWidth }}
         >
@@ -30,7 +39,7 @@ export function SummaryChart({ points }: Props) {
               <div
                 key={point.label}
                 className={
-                  shouldScroll
+                  isMonthly
                     ? "flex w-7 shrink-0 flex-col items-center gap-1"
                     : "flex min-w-0 flex-1 flex-col items-center gap-1"
                 }
@@ -45,7 +54,7 @@ export function SummaryChart({ points }: Props) {
                     }}
                   />
                 </div>
-                <span className="max-w-full truncate font-mono text-[10px] text-[var(--fl-text-subtle)]">
+                <span className="h-3 max-w-full truncate font-mono text-[10px] text-[var(--fl-text-subtle)]">
                   {point.label}
                 </span>
               </div>

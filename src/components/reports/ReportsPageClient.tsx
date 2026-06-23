@@ -168,7 +168,51 @@ export function ReportsPageClient({ initialEntries, initialSummary }: Props) {
 
       {/* スクロール領域 */}
       <div className="flex-1 overflow-y-auto">
-        {/* ツールバー */}
+        {/* 集計グラフ */}
+        <div
+          className="px-7 py-5"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <div className="text-[13px] font-[500] text-[var(--fl-text)]">
+                集計グラフ
+              </div>
+              <div className="text-[11px] text-[var(--fl-text-subtle)]">
+                {summary.rangeLabel}
+              </div>
+            </div>
+            <div className="tabs">
+              <button
+                className={`tab${summaryPeriod === "week" ? " active" : ""}`}
+                onClick={() => handleSummaryPeriod("week")}
+              >
+                週次
+              </button>
+              <button
+                className={`tab${summaryPeriod === "month" ? " active" : ""}`}
+                onClick={() => handleSummaryPeriod("month")}
+              >
+                月次
+              </button>
+            </div>
+          </div>
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1.3fr)_minmax(220px,0.85fr)_minmax(220px,0.85fr)]">
+            <SummaryChart points={summary.series} period={summaryPeriod} />
+            <BreakdownList
+              title="プロジェクト別"
+              items={summary.projects}
+              totalSec={summary.totalSec}
+            />
+            <BreakdownList
+              title="タグ別"
+              items={summary.tags}
+              totalSec={summary.totalSec}
+            />
+          </div>
+        </div>
+
+        {/* カレンダー操作 */}
         <div className="reports-toolbar" onClick={(e) => e.stopPropagation()}>
           <div className="tabs">
             <button
@@ -232,7 +276,7 @@ export function ReportsPageClient({ initialEntries, initialSummary }: Props) {
           </div>
         </div>
 
-        {/* 統計カード */}
+        {/* カレンダー統計 */}
         <div
           className="stats-grid stats-grid-2"
           onClick={(e) => e.stopPropagation()}
@@ -251,49 +295,6 @@ export function ReportsPageClient({ initialEntries, initialSummary }: Props) {
             deltaDir="up"
             spark={dailyHours}
           />
-        </div>
-
-        <div
-          className="px-7 pb-5"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div>
-              <div className="text-[13px] font-[500] text-[var(--fl-text)]">
-                集計グラフ
-              </div>
-              <div className="text-[11px] text-[var(--fl-text-subtle)]">
-                {summary.rangeLabel}
-              </div>
-            </div>
-            <div className="tabs">
-              <button
-                className={`tab${summaryPeriod === "week" ? " active" : ""}`}
-                onClick={() => handleSummaryPeriod("week")}
-              >
-                週次
-              </button>
-              <button
-                className={`tab${summaryPeriod === "month" ? " active" : ""}`}
-                onClick={() => handleSummaryPeriod("month")}
-              >
-                月次
-              </button>
-            </div>
-          </div>
-          <div className="grid gap-3 lg:grid-cols-[minmax(0,1.3fr)_minmax(220px,0.85fr)_minmax(220px,0.85fr)]">
-            <SummaryChart points={summary.series} />
-            <BreakdownList
-              title="プロジェクト別"
-              items={summary.projects}
-              totalSec={summary.totalSec}
-            />
-            <BreakdownList
-              title="タグ別"
-              items={summary.tags}
-              totalSec={summary.totalSec}
-            />
-          </div>
         </div>
 
         {/* ビュー本体 */}

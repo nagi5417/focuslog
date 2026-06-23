@@ -9,6 +9,7 @@ import {
   Filter,
 } from "lucide-react";
 
+import { getReportSummary } from "@/lib/actions/report";
 import { getTimeEntriesForWeek } from "@/lib/actions/log";
 import {
   jstStartOfWeek,
@@ -20,14 +21,20 @@ import { StatCard } from "./StatCard";
 import { WeekView } from "./WeekView";
 import { DayView } from "./DayView";
 import { EditPopover } from "./EditPopover";
+import { SummaryChart } from "./SummaryChart";
+import { BreakdownList } from "./BreakdownList";
 import type { TimeEntryBlock } from "@/types/report";
+import type { ReportPeriod, ReportSummary } from "@/types";
 
 type Props = {
   initialEntries: TimeEntryBlock[];
+  initialSummary: ReportSummary;
 };
 
-export function ReportsPageClient({ initialEntries }: Props) {
+export function ReportsPageClient({ initialEntries, initialSummary }: Props) {
   const [view, setView] = useState<"week" | "day">("week");
+  const [summaryPeriod, setSummaryPeriod] = useState<ReportPeriod>("week");
+  const [summary, setSummary] = useState(initialSummary);
   const [weekOffset, setWeekOffset] = useState(0);
   const [dayIdx, setDayIdx] = useState(() => todayWeekIdx());
   const [entries, setEntries] = useState(initialEntries);
@@ -71,6 +78,15 @@ export function ReportsPageClient({ initialEntries }: Props) {
     const fresh = await getTimeEntriesForWeek(ws);
     setEntries(fresh);
     closePopover();
+  }
+
+  async function handleSummaryPeriod(next: ReportPeriod) {
+    setSummaryPeriod(next);
+    const fresh = await getReportSummary({
+      period: next,
+      anchorDate: weekDates[dayIdx],
+    });
+    setSummary(fresh);
   }
 
   // 日ビューナビゲーション
@@ -144,15 +160,9 @@ export function ReportsPageClient({ initialEntries }: Props) {
         style={{ borderColor: "var(--fl-border)" }}
       >
         <div>
-          <h1 className="flex items-baseline gap-2 text-[18px] font-[600] tracking-[-0.02em] text-[var(--fl-text)]">
+          <h1 className="text-[18px] font-[600] tracking-[-0.02em] text-[var(--fl-text)]">
             レポート
-            <span className="text-[12px] font-[400] text-[var(--fl-text-subtle)] tracking-normal">
-              単一タスク計測 · ブロック表示
-            </span>
           </h1>
-          <p className="mt-0.5 text-[12px] text-[var(--fl-text-muted)]">
-            集中時間の可視化とリアルタイム計測ログ。ブロックをクリックで時刻編集。
-          </p>
         </div>
       </div>
 
@@ -241,6 +251,49 @@ export function ReportsPageClient({ initialEntries }: Props) {
             deltaDir="up"
             spark={dailyHours}
           />
+        </div>
+
+        <div
+          className="px-7 pb-5"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <div className="text-[13px] font-[500] text-[var(--fl-text)]">
+                集計グラフ
+              </div>
+              <div className="text-[11px] text-[var(--fl-text-subtle)]">
+                {summary.rangeLabel}
+              </div>
+            </div>
+            <div className="tabs">
+              <button
+                className={`tab${summaryPeriod === "week" ? " active" : ""}`}
+                onClick={() => handleSummaryPeriod("week")}
+              >
+                週次
+              </button>
+              <button
+                className={`tab${summaryPeriod === "month" ? " active" : ""}`}
+                onClick={() => handleSummaryPeriod("month")}
+              >
+                月次
+              </button>
+            </div>
+          </div>
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1.3fr)_minmax(220px,0.85fr)_minmax(220px,0.85fr)]">
+            <SummaryChart points={summary.series} />
+            <BreakdownList
+              title="プロジェクト別"
+              items={summary.projects}
+              totalSec={summary.totalSec}
+            />
+            <BreakdownList
+              title="タグ別"
+              items={summary.tags}
+              totalSec={summary.totalSec}
+            />
+          </div>
         </div>
 
         {/* ビュー本体 */}

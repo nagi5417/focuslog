@@ -11,6 +11,23 @@ export type Tag =
   | "research"
   | "cs";
 
+export type ProjectSummary = {
+  id: string;
+  name: string;
+  color: string | null;
+};
+
+export type TagSummary = {
+  id: string;
+  name: string;
+  color: string | null;
+};
+
+export type TaskClassificationOptions = {
+  projects: ProjectSummary[];
+  tags: TagSummary[];
+};
+
 export type TaskStatus = "TODO" | "IN_PROGRESS" | "DONE";
 
 /**
@@ -27,4 +44,6 @@ export type Task = {
   dueDate: string | null; // ISO 文字列（Date は props 越えでシリアライズされるため文字列で保持）
   createdAt: string; // ISO 文字列
   elapsed: number; // 完了済み TimeEntry.durationSec の合計（サーバー集計値）
+  project: ProjectSummary | null;
+  tags: TagSummary[];
 };

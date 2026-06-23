@@ -6,6 +6,7 @@ import { AuthError } from "next-auth";
 import { z } from "zod";
 
 import { prisma } from "@/lib/db";
+import { requireUser } from "@/lib/auth/helpers";
 import { signIn, signOut } from "@/lib/auth/auth";
 import {
   sendVerificationEmail,
@@ -21,6 +22,10 @@ import {
   type ForgotPasswordInput,
   type ResetPasswordInput,
 } from "@/lib/validations/auth";
+import {
+  deleteAccountSchema,
+  type DeleteAccountInput,
+} from "@/lib/validations/account";
 import type { ActionResult } from "@/types";
 
 // VerificationToken に type 列が無いため、identifier のプレフィックスで用途を区別する。
@@ -231,4 +236,40 @@ export async function signInWithGoogle(): Promise<void> {
 // ログアウト。form action として呼び、/login へ遷移させる。
 export async function signOutAction(): Promise<void> {
   await signOut({ redirectTo: "/login" });
+}
+
+export async function deleteAccountAction(
+  input: DeleteAccountInput,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  const parsed = deleteAccountSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "入力内容を確認してください",
+    };
+  }
+
+  const current = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { id: true, email: true },
+  });
+  if (!current) return { ok: false, error: "ユーザーが見つかりません" };
+  if (current.email !== parsed.data.email) {
+    return { ok: false, error: "メールアドレスが一致しません" };
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.verificationToken.deleteMany({
+      where: {
+        identifier: {
+          in: [`${VERIFY_PREFIX}${current.email}`, `${RESET_PREFIX}${current.email}`],
+        },
+      },
+    });
+    await tx.user.delete({ where: { id: current.id } });
+  });
+
+  await signOut({ redirectTo: "/login" });
+  return { ok: true, data: undefined };
 }

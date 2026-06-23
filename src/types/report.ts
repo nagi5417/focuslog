@@ -23,3 +23,28 @@ export type TimeEntryBlock = WeekBlock & {
   startedAtMs: number;
   endedAtMs: number;
 };
+
+export type ReportPeriod = "week" | "month";
+
+export type ReportSeriesPoint = {
+  label: string;
+  seconds: number;
+};
+
+export type ReportBreakdownItem = {
+  id: string | null;
+  name: string;
+  seconds: number;
+  color: string | null;
+};
+
+export type ReportSummary = {
+  period: ReportPeriod;
+  rangeLabel: string;
+  totalSec: number;
+  averageSec: number;
+  sessionCount: number;
+  series: ReportSeriesPoint[];
+  projects: ReportBreakdownItem[];
+  tags: ReportBreakdownItem[];
+};

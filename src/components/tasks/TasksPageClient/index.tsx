@@ -18,12 +18,13 @@ import { SectionCard } from "@/components/tasks/SectionCard";
 import { TaskRow } from "@/components/tasks/TaskRow";
 import { TaskFormModal } from "@/components/tasks/TaskFormModal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import type { Priority, Task } from "@/types/task";
+import type { Priority, Task, TaskClassificationOptions } from "@/types/task";
 import type { ActiveTimer } from "@/lib/actions/timer";
 
 type Props = {
   initialTasks: Task[];
   initialActiveTimer: ActiveTimer | null;
+  initialClassificationOptions: TaskClassificationOptions;
   nowMs: number;
 };
 
@@ -38,6 +39,7 @@ const PRIORITY_FILTERS: { prio: Priority; label: string; dot: string }[] = [
 export function TasksPageClient({
   initialTasks,
   initialActiveTimer,
+  initialClassificationOptions,
   nowMs,
 }: Props) {
   const {
@@ -55,6 +57,11 @@ export function TasksPageClient({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [classificationOptions, setClassificationOptions] = useState(
+    initialClassificationOptions,
+  );
+  const [projectFilter, setProjectFilter] = useState("");
+  const [tagFilter, setTagFilter] = useState<Set<string>>(new Set());
   const [priorityFilter, setPriorityFilter] = useState<Set<Priority>>(
     new Set(),
   );
@@ -88,7 +95,10 @@ export function TasksPageClient({
     const byPriority =
       priorityFilter.size === 0 ||
       priorityFilter.has(toPriorityLabel(t.priority));
-    return byQuery && byPriority;
+    const byProject = !projectFilter || t.project?.id === projectFilter;
+    const byTags =
+      tagFilter.size === 0 || t.tags.some((tag) => tagFilter.has(tag.id));
+    return byQuery && byPriority && byProject && byTags;
   };
 
   // today / other に分けて done 順でソート
@@ -113,6 +123,8 @@ export function TasksPageClient({
     (s, t) => s + (t.id === runningTaskId ? liveElapsed : t.elapsed),
     0,
   );
+  const activeFilterCount =
+    priorityFilter.size + tagFilter.size + (projectFilter ? 1 : 0);
 
   const dateStr = fmtDate(new Date(nowMs));
 
@@ -123,6 +135,21 @@ export function TasksPageClient({
       else next.add(prio);
       return next;
     });
+  }
+
+  function toggleTagFilter(id: string) {
+    setTagFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function clearFilters() {
+    setPriorityFilter(new Set());
+    setProjectFilter("");
+    setTagFilter(new Set());
   }
 
   function closeSearch() {
@@ -154,41 +181,63 @@ export function TasksPageClient({
           <Popover>
             <PopoverTrigger asChild>
               <button
+                data-testid="task-filter-open"
                 className={cn(
                   "flex shrink-0 items-center gap-1.5 h-[30px] px-3 rounded-[7px] border text-[12px] font-[500] transition-colors duration-[80ms] cursor-pointer hover:bg-[var(--fl-hover)]",
-                  priorityFilter.size > 0
+                  activeFilterCount > 0
                     ? "text-[var(--fl-text)] border-[var(--fl-brand)]"
                     : "text-[var(--fl-text-muted)]",
                 )}
                 style={
-                  priorityFilter.size > 0
+                  activeFilterCount > 0
                     ? undefined
                     : { borderColor: "var(--fl-border)" }
                 }
               >
                 <Filter size={13} />
                 フィルタ
-                {priorityFilter.size > 0 && (
+                {activeFilterCount > 0 && (
                   <span className="inline-flex items-center justify-center h-[16px] min-w-[16px] px-1 rounded-full bg-[var(--fl-brand)] text-[var(--fl-on-brand)] font-mono text-[9px]">
-                    {priorityFilter.size}
+                    {activeFilterCount}
                   </span>
                 )}
               </button>
             </PopoverTrigger>
-            <PopoverContent align="end" className="w-44">
+            <PopoverContent align="end" className="w-64">
               <div className="flex items-center justify-between">
                 <span className="text-[12px] font-[500] text-[var(--fl-text)]">
-                  優先度で絞り込み
+                  絞り込み
                 </span>
-                {priorityFilter.size > 0 && (
+                {(priorityFilter.size > 0 || projectFilter || tagFilter.size > 0) && (
                   <button
-                    onClick={() => setPriorityFilter(new Set())}
+                    onClick={clearFilters}
                     className="text-[11px] text-[var(--fl-text-muted)] hover:text-[var(--fl-text)] cursor-pointer"
                   >
                     クリア
                   </button>
                 )}
               </div>
+              <div className="mt-2 flex flex-col gap-1">
+                <span className="text-[11px] text-[var(--fl-text-subtle)]">
+                  プロジェクト
+                </span>
+                <select
+                  value={projectFilter}
+                  onChange={(e) => setProjectFilter(e.target.value)}
+                  className="h-8 rounded-md border border-[var(--fl-border)] bg-transparent px-2 text-[12px] text-[var(--fl-text)] outline-none"
+                >
+                  <option value="">すべて</option>
+                  {classificationOptions.projects.map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="mt-2 flex flex-col gap-1">
+                <span className="text-[11px] text-[var(--fl-text-subtle)]">
+                  優先度
+                </span>
               {PRIORITY_FILTERS.map(({ prio, label, dot }) => (
                 <label
                   key={prio}
@@ -202,6 +251,30 @@ export function TasksPageClient({
                   {label}
                 </label>
               ))}
+              </div>
+              <div className="mt-2 flex flex-col gap-1">
+                <span className="text-[11px] text-[var(--fl-text-subtle)]">
+                  タグ
+                </span>
+                {classificationOptions.tags.length === 0 ? (
+                  <span className="text-[11px] text-[var(--fl-text-subtle)]">
+                    タグはまだありません
+                  </span>
+                ) : (
+                  classificationOptions.tags.map((tag) => (
+                    <label
+                      key={tag.id}
+                      className="flex items-center gap-2 py-1 cursor-pointer text-[13px] text-[var(--fl-text)]"
+                    >
+                      <Checkbox
+                        checked={tagFilter.has(tag.id)}
+                        onCheckedChange={() => toggleTagFilter(tag.id)}
+                      />
+                      #{tag.name}
+                    </label>
+                  ))
+                )}
+              </div>
             </PopoverContent>
           </Popover>
 
@@ -233,6 +306,7 @@ export function TasksPageClient({
             </div>
           ) : (
             <button
+              data-testid="task-search-open"
               onClick={() => {
                 setSearchOpen(true);
                 requestAnimationFrame(() => searchRef.current?.focus());
@@ -329,6 +403,8 @@ export function TasksPageClient({
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
         onAdd={handleAddTask}
+        classificationOptions={classificationOptions}
+        onClassificationOptionsChange={setClassificationOptions}
       />
 
       {/* 編集モーダル（開いている間だけマウントし、key で初期値を確実に反映） */}
@@ -342,6 +418,8 @@ export function TasksPageClient({
             if (!next) setEditingTask(null);
           }}
           onUpdated={handleUpdated}
+          classificationOptions={classificationOptions}
+          onClassificationOptionsChange={setClassificationOptions}
         />
       )}
 

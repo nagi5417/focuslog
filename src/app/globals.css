@@ -180,6 +180,28 @@
   --chart-5: var(--fl-pri-high);
 }
 
+/* ---- Accent: green ---- */
+[data-accent="green"] {
+  --fl-brand: #10b981;
+  --fl-brand-2: #34d399;
+  --fl-brand-dim: #064e3b;
+  --fl-brand-ghost: rgba(16, 185, 129, 0.13);
+  --fl-brand-glow: rgba(16, 185, 129, 0.35);
+  --fl-on-brand: #001c14;
+  --primary: var(--fl-brand);
+  --ring: var(--fl-brand-ghost);
+}
+:root:not(.dark)[data-accent="green"] {
+  --fl-brand: #059669;
+  --fl-brand-2: #10b981;
+  --fl-brand-dim: #d1fae5;
+  --fl-brand-ghost: rgba(5, 150, 105, 0.1);
+  --fl-brand-glow: rgba(5, 150, 105, 0.25);
+  --fl-on-brand: #ffffff;
+  --primary: var(--fl-brand);
+  --ring: var(--fl-brand-ghost);
+}
+
 /* ---- Accent: blue ---- */
 [data-accent="blue"] {
   --fl-brand: #3b82f6;
@@ -197,6 +219,28 @@
   --fl-brand-dim: #dbeafe;
   --fl-brand-ghost: rgba(37, 99, 235, 0.1);
   --fl-brand-glow: rgba(37, 99, 235, 0.25);
+  --fl-on-brand: #ffffff;
+  --primary: var(--fl-brand);
+  --ring: var(--fl-brand-ghost);
+}
+
+/* ---- Accent: yellow ---- */
+[data-accent="yellow"] {
+  --fl-brand: #facc15;
+  --fl-brand-2: #fde047;
+  --fl-brand-dim: #713f12;
+  --fl-brand-ghost: rgba(250, 204, 21, 0.14);
+  --fl-brand-glow: rgba(250, 204, 21, 0.35);
+  --fl-on-brand: #1a1200;
+  --primary: var(--fl-brand);
+  --ring: var(--fl-brand-ghost);
+}
+:root:not(.dark)[data-accent="yellow"] {
+  --fl-brand: #ca8a04;
+  --fl-brand-2: #eab308;
+  --fl-brand-dim: #fef3c7;
+  --fl-brand-ghost: rgba(202, 138, 4, 0.1);
+  --fl-brand-glow: rgba(202, 138, 4, 0.25);
   --fl-on-brand: #ffffff;
   --primary: var(--fl-brand);
   --ring: var(--fl-brand-ghost);

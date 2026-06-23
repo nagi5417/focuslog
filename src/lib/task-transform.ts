@@ -100,6 +100,10 @@ export type PrismaTaskWithEntries = {
   dueDate: Date | null;
   createdAt: Date;
   timeEntries: { durationSec: number | null }[];
+  project?: { id: string; name: string; color: string | null } | null;
+  tagLinks?: {
+    tag: { id: string; name: string; color: string | null };
+  }[];
 };
 
 // Prisma の Task → フロントの生値 Task。表示ラベルは持たせない（表示時にセレクタで算出）
@@ -116,5 +120,14 @@ export function toFrontTask(t: PrismaTaskWithEntries): Task {
     dueDate: t.dueDate ? t.dueDate.toISOString() : null,
     createdAt: t.createdAt.toISOString(),
     elapsed,
+    project: t.project
+      ? { id: t.project.id, name: t.project.name, color: t.project.color }
+      : null,
+    tags:
+      t.tagLinks?.map(({ tag }) => ({
+        id: tag.id,
+        name: tag.name,
+        color: tag.color,
+      })) ?? [],
   };
 }

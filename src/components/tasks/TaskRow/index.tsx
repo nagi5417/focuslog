@@ -76,7 +76,9 @@ export function TaskRow({
         ],
         done && "opacity-60",
       )}
-      style={{ gridTemplateColumns: "32px 32px 1fr auto auto auto auto" }}
+      style={{
+        gridTemplateColumns: "32px 32px minmax(0,1fr) auto auto auto auto auto",
+      }}
     >
       {/* 再生 / 停止ボタン */}
       <button
@@ -85,11 +87,11 @@ export function TaskRow({
         disabled={isPending}
         title={isRunning ? "停止" : "計測開始"}
         className={cn(
-          "flex items-center justify-center w-[22px] h-[22px] rounded-[5px]",
-          "transition-all duration-[80ms] cursor-pointer",
+          "flex items-center justify-center w-[22px] h-[22px] rounded-[5px] border",
+          "transition-all duration-[80ms] cursor-pointer shadow-[0_0_0_0_var(--fl-brand-glow)]",
           isRunning
-            ? "bg-[var(--fl-brand)] text-[var(--fl-on-brand)]"
-            : "text-[var(--fl-text-muted)] hover:text-[var(--fl-brand)] hover:bg-[var(--fl-brand-ghost)]",
+            ? "border-[var(--fl-brand)] bg-[var(--fl-brand)] text-[var(--fl-on-brand)] shadow-[0_0_0_3px_var(--fl-brand-ghost)]"
+            : "border-[var(--fl-brand)] bg-transparent text-[var(--fl-brand)] hover:bg-[var(--fl-brand-ghost)] hover:shadow-[0_0_0_3px_var(--fl-brand-ghost)]",
           "disabled:opacity-50",
         )}
       >
@@ -136,6 +138,28 @@ export function TaskRow({
       >
         {task.title}
       </span>
+
+      {/* 分類バッジ */}
+      <div className="hidden max-w-[220px] items-center gap-1 overflow-hidden lg:flex">
+        {task.project && (
+          <span className="truncate rounded-[4px] border border-[var(--fl-border)] bg-[var(--fl-panel-2)] px-1.5 py-0.5 text-[10.5px] text-[var(--fl-text-muted)]">
+            {task.project.name}
+          </span>
+        )}
+        {task.tags.slice(0, 2).map((tag) => (
+          <span
+            key={tag.id}
+            className="truncate rounded-[4px] border border-[var(--fl-border)] bg-[var(--fl-panel-2)] px-1.5 py-0.5 font-mono text-[10.5px] text-[var(--fl-text-muted)]"
+          >
+            #{tag.name}
+          </span>
+        ))}
+        {task.tags.length > 2 && (
+          <span className="font-mono text-[10.5px] text-[var(--fl-text-subtle)]">
+            +{task.tags.length - 2}
+          </span>
+        )}
+      </div>
 
       {/* 優先度バッジ */}
       <PriorityBadge prio={prio} />

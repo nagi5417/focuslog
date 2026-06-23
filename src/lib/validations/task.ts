@@ -11,6 +11,8 @@ export const taskInputSchema = z.object({
     .optional(),
   priority: z.number().int().min(0).max(3).default(0),
   dueDate: z.coerce.date().optional(),
+  projectId: z.string().cuid().nullable().optional(),
+  tagIds: z.array(z.string().cuid()).max(20).optional(),
 });
 
 export const updateTaskSchema = taskInputSchema.partial();

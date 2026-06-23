@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { List, BarChart3, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BrandMark } from "@/components/layout/BrandMark";
+import { useTimerStore } from "@/stores/timer-store";
 
 type User = { name?: string | null; email?: string | null };
 
@@ -30,8 +31,19 @@ function initials(name?: string | null) {
     .slice(0, 2);
 }
 
-export function Sidebar({ user }: { user?: User }) {
+export function Sidebar({
+  user,
+  todayTaskCount,
+  hasActiveTimer,
+}: {
+  user?: User;
+  todayTaskCount: number;
+  hasActiveTimer: boolean;
+}) {
   const pathname = usePathname();
+  const runningTaskId = useTimerStore((state) => state.runningTaskId);
+  const stopSeq = useTimerStore((state) => state.stopSeq);
+  const showActiveTimer = Boolean(runningTaskId) || (hasActiveTimer && stopSeq === 0);
 
   return (
     <aside
@@ -57,7 +69,7 @@ export function Sidebar({ user }: { user?: User }) {
             borderColor: "var(--fl-border)",
           }}
         >
-          v1.0
+          v1.1
         </span>
       </div>
 
@@ -97,6 +109,40 @@ export function Sidebar({ user }: { user?: User }) {
                 }}
               />
               <span>{label}</span>
+              {href === "/tasks" && (
+                <span
+                  className="ml-auto rounded-[999px] px-[6px] py-[1px] font-mono text-[10px]"
+                  style={{
+                    background: isActive
+                      ? "var(--fl-brand-ghost)"
+                      : "var(--fl-panel-2)",
+                    color: isActive
+                      ? "var(--fl-brand)"
+                      : "var(--fl-text-subtle)",
+                  }}
+                >
+                  {todayTaskCount}
+                </span>
+              )}
+              {href === "/reports" && showActiveTimer && (
+                <span
+                  className="ml-auto inline-flex items-center gap-[4px] rounded-[999px] px-[6px] py-[1px] font-mono text-[10px]"
+                  style={{
+                    background: isActive
+                      ? "var(--fl-brand-ghost)"
+                      : "var(--fl-panel-2)",
+                    color: isActive
+                      ? "var(--fl-brand)"
+                      : "var(--fl-text-subtle)",
+                  }}
+                >
+                  <span
+                    className="size-[5px] rounded-full"
+                    style={{ background: "var(--fl-brand)" }}
+                  />
+                  LIVE
+                </span>
+              )}
             </Link>
           );
         })}

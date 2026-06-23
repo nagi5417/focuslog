@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useReducer, useTransition } from "react";
+import { useEffect, useReducer, useRef, useTransition } from "react";
 import { Square } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTimerStore } from "@/stores/timer-store";
@@ -12,19 +12,39 @@ const GOAL_SEC = 25 * 60;
 
 export function TimerBar({
   timerStyle = "regular",
+  initialActiveTimer = null,
 }: {
   timerStyle?: TimerStyle;
+  initialActiveTimer?: {
+    taskId: string;
+    taskTitle: string;
+    startedAtMs: number;
+  } | null;
 }) {
   const { runningTaskId, runningTaskTitle, startedAtMs, getElapsed, stop } =
     useTimerStore();
+  const start = useTimerStore((state) => state.start);
   const [, tick] = useReducer((n: number) => n + 1, 0);
   const [isPending, startTransition] = useTransition();
+  const hasHydratedInitialTimer = useRef(false);
 
   useEffect(() => {
     if (!runningTaskId) return;
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, [runningTaskId]);
+
+  useEffect(() => {
+    if (hasHydratedInitialTimer.current || runningTaskId || !initialActiveTimer) {
+      return;
+    }
+    hasHydratedInitialTimer.current = true;
+    start(
+      initialActiveTimer.taskId,
+      initialActiveTimer.taskTitle,
+      initialActiveTimer.startedAtMs,
+    );
+  }, [initialActiveTimer, runningTaskId, start]);
 
   const elapsed = runningTaskId ? getElapsed() : 0;
 

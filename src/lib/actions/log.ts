@@ -53,7 +53,11 @@ type PrismaEntry = {
   startedAt: Date;
   endedAt: Date;
   durationSec: number;
-  task: { id: string; title: string } | null;
+  task: {
+    id: string;
+    title: string;
+    tagLinks: { tag: { id: string; name: string } }[];
+  } | null;
 };
 
 function toBlock(entry: PrismaEntry, weekStartUtc: Date): TimeEntryBlock {
@@ -64,6 +68,7 @@ function toBlock(entry: PrismaEntry, weekStartUtc: Date): TimeEntryBlock {
   );
   const startMin = jstStart.getUTCHours() * 60 + jstStart.getUTCMinutes();
   const durMin = Math.floor(entry.durationSec / 60);
+  const primaryTag = entry.task?.tagLinks[0]?.tag ?? null;
   return {
     id: entry.id,
     taskId: entry.taskId,
@@ -71,8 +76,8 @@ function toBlock(entry: PrismaEntry, weekStartUtc: Date): TimeEntryBlock {
     start: startMin,
     dur: durMin,
     title: entry.task?.title ?? "（タスクなし）",
-    tag: "",
-    color: pickColor(entry.taskId ?? entry.id),
+    tag: primaryTag?.name ?? "",
+    color: pickColor(primaryTag?.id ?? entry.taskId ?? entry.id),
     startedAtMs: entry.startedAt.getTime(),
     endedAtMs: entry.endedAt.getTime(),
   };
@@ -92,7 +97,18 @@ export async function getTimeEntriesForWeek(
       endedAt: { not: null },
       startedAt: { gte: weekStart, lt: weekEnd },
     },
-    include: { task: { select: { id: true, title: true } } },
+    include: {
+      task: {
+        select: {
+          id: true,
+          title: true,
+          tagLinks: {
+            include: { tag: { select: { id: true, name: true } } },
+            orderBy: { tag: { name: "asc" } },
+          },
+        },
+      },
+    },
     orderBy: { startedAt: "asc" },
   });
 
@@ -119,7 +135,18 @@ export async function getTimeEntriesForDay(
       endedAt: { not: null },
       startedAt: { gte: dayStart, lt: dayEnd },
     },
-    include: { task: { select: { id: true, title: true } } },
+    include: {
+      task: {
+        select: {
+          id: true,
+          title: true,
+          tagLinks: {
+            include: { tag: { select: { id: true, name: true } } },
+            orderBy: { tag: { name: "asc" } },
+          },
+        },
+      },
+    },
     orderBy: { startedAt: "asc" },
   });
 
@@ -159,7 +186,18 @@ export async function updateTimeEntry(
   const updated = await prisma.timeEntry.update({
     where: { id },
     data: { startedAt, endedAt, durationSec },
-    include: { task: { select: { id: true, title: true } } },
+    include: {
+      task: {
+        select: {
+          id: true,
+          title: true,
+          tagLinks: {
+            include: { tag: { select: { id: true, name: true } } },
+            orderBy: { tag: { name: "asc" } },
+          },
+        },
+      },
+    },
   });
 
   revalidatePath("/reports");

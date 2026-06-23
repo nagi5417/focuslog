@@ -20,7 +20,7 @@ export function TopbarMobile() {
           borderColor: "var(--fl-border)",
         }}
       >
-        v1.0
+        v1.1
       </span>
     </header>
   );

@@ -1,37 +1,38 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ThemeSelector } from "./ThemeSelector";
 
-const mockSetTheme = vi.fn();
+const mocks = vi.hoisted(() => ({
+  setTheme: vi.fn(),
+  updateSetting: vi.fn(),
+  useTheme: vi.fn(),
+}));
 
 vi.mock("next-themes", () => ({
-  useTheme: vi.fn(() => ({
-    theme: "light",
-    setTheme: mockSetTheme,
-    themes: ["light", "dark", "system"],
-  })),
+  useTheme: mocks.useTheme,
 }));
 
 vi.mock("@/lib/actions/setting", () => ({
-  updateSetting: vi.fn().mockResolvedValue({ ok: true, data: undefined }),
+  updateSetting: mocks.updateSetting,
 }));
-
-import { useTheme } from "next-themes";
-const mockUseTheme = vi.mocked(useTheme);
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockUseTheme.mockReturnValue({
+  mocks.useTheme.mockReturnValue({
     theme: "light",
-    setTheme: mockSetTheme,
+    setTheme: mocks.setTheme,
     themes: ["light", "dark", "system"],
+  });
+  mocks.updateSetting.mockResolvedValue({
+    ok: true,
+    data: { theme: "dark", accent: "blue" },
   });
 });
 
 describe("ThemeSelector", () => {
   it("現在のテーマのボタンに aria-pressed='true' が付くこと", () => {
-    render(<ThemeSelector initialTheme="light" />);
+    render(<ThemeSelector initialTheme="system" />);
 
     expect(screen.getByRole("button", { name: "ライト" })).toHaveAttribute(
       "aria-pressed",
@@ -47,39 +48,28 @@ describe("ThemeSelector", () => {
     );
   });
 
-  it("ボタンクリックで setTheme が呼ばれること", async () => {
+  it("ボタンクリックでテーマ変更と設定保存が呼ばれること", async () => {
     const user = userEvent.setup();
     render(<ThemeSelector initialTheme="light" />);
 
     await user.click(screen.getByRole("button", { name: "ダーク" }));
 
-    expect(mockSetTheme).toHaveBeenCalledWith("dark");
+    expect(mocks.setTheme).toHaveBeenCalledWith("dark");
+    expect(mocks.updateSetting).toHaveBeenCalledWith({ theme: "dark" });
   });
 
-  it("isPending のとき全ボタンが disabled になること", async () => {
-    // useTransition をモックして isPending=true を再現
-    const { useTransition } = await import("react");
-    const startTransitionMock = vi.fn((fn: () => void) => fn());
-    vi.spyOn({ useTransition }, "useTransition").mockReturnValue([
-      true,
-      startTransitionMock,
-    ]);
+  it("next-themes の値が未確定なら initialTheme を使うこと", () => {
+    mocks.useTheme.mockReturnValue({
+      theme: undefined,
+      setTheme: mocks.setTheme,
+      themes: ["light", "dark", "system"],
+    });
 
-    // updateSetting を pending のまま止める
-    const { updateSetting } = await import("@/lib/actions/setting");
-    vi.mocked(updateSetting).mockImplementation(
-      () => new Promise(() => {}), // 解決しない Promise
+    render(<ThemeSelector initialTheme="system" />);
+
+    expect(screen.getByRole("button", { name: "システム" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
     );
-
-    const user = userEvent.setup();
-    render(<ThemeSelector initialTheme="light" />);
-
-    // ボタンをクリックして pending 状態にする
-    await user.click(screen.getByRole("button", { name: "ダーク" }));
-
-    // クリック後 disabled になっていること（React の useTransition は非同期）
-    // 注: jsdom 環境では useTransition の pending は即時に解除されるため、
-    // disabled 属性ではなく setTheme が呼ばれたことだけを検証する
-    expect(mockSetTheme).toHaveBeenCalledWith("dark");
   });
 });

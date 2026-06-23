@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createProject, createTag } from "@/lib/actions/classification";
 import { createTask, updateTask } from "@/lib/actions/task";
 import { jstInputsToIso, toJstDateInput, toJstTimeInput } from "@/lib/jst";
 import { cn } from "@/lib/utils";
@@ -15,7 +16,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { Priority, Task } from "@/types/task";
+import type {
+  Priority,
+  ProjectSummary,
+  TagSummary,
+  Task,
+  TaskClassificationOptions,
+} from "@/types/task";
 
 type CreateProps = {
   mode?: "create";
@@ -29,6 +36,8 @@ type EditProps = {
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  classificationOptions: TaskClassificationOptions;
+  onClassificationOptionsChange: (options: TaskClassificationOptions) => void;
 } & (CreateProps | EditProps);
 
 // 優先度の数値は createTask 側の閾値（>=3 high / ==2 mid / else low）に整合させる
@@ -47,7 +56,12 @@ const DOT_CLASS: Record<Priority, string> = {
 const DEFAULT_PRIORITY = 0;
 
 export function TaskFormModal(props: Props) {
-  const { open, onOpenChange } = props;
+  const {
+    open,
+    onOpenChange,
+    classificationOptions,
+    onClassificationOptionsChange,
+  } = props;
   const isEdit = props.mode === "edit";
   // 編集時は生値（priority 数値・dueDate の ISO）から初期値を作る。
   // 親は key={task.id} で編集インスタンスをマウントするため初期化子が正しく効く。
@@ -63,7 +77,17 @@ export function TaskFormModal(props: Props) {
   const [priority, setPriority] = useState<number>(
     initialTask?.priority ?? DEFAULT_PRIORITY,
   );
+  const [projectId, setProjectId] = useState<string>(
+    initialTask?.project?.id ?? "",
+  );
+  const [tagIds, setTagIds] = useState<Set<string>>(
+    () => new Set(initialTask?.tags.map((tag) => tag.id) ?? []),
+  );
+  const [newProjectName, setNewProjectName] = useState("");
+  const [newTagName, setNewTagName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCreatingProject, setIsCreatingProject] = useState(false);
+  const [isCreatingTag, setIsCreatingTag] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function resetForm() {
@@ -71,6 +95,10 @@ export function TaskFormModal(props: Props) {
     setDate("");
     setTime("");
     setPriority(DEFAULT_PRIORITY);
+    setProjectId("");
+    setTagIds(new Set());
+    setNewProjectName("");
+    setNewTagName("");
     setError(null);
   }
 
@@ -90,6 +118,7 @@ export function TaskFormModal(props: Props) {
     // 日付があれば JST 固定で ISO 化（時刻未指定は当日終わり 23:59）。日付が無ければ期限クリア。
     // 素朴な new Date(`${date}T${time}`) はローカル TZ 依存になるため使わない。
     const dueDate = date ? jstInputsToIso(date, time || "23:59") : null;
+    const selectedTagIds = [...tagIds];
 
     setIsSubmitting(true);
     setError(null);
@@ -99,12 +128,16 @@ export function TaskFormModal(props: Props) {
             title: trimmed,
             priority,
             dueDate, // 編集は null で期限クリア（updateTask の nullish Zod が受理）
+            projectId: projectId || null,
+            tagIds: selectedTagIds,
           })
         : await createTask({
             title: trimmed,
             priority,
             // 作成は null 非対応のため undefined（期限なし）に寄せる
             dueDate: dueDate ?? undefined,
+            projectId: projectId || null,
+            tagIds: selectedTagIds,
           });
     setIsSubmitting(false);
 
@@ -120,6 +153,55 @@ export function TaskFormModal(props: Props) {
       resetForm();
     }
     onOpenChange(false);
+  }
+
+  function toggleTag(id: string) {
+    setTagIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function handleCreateProject() {
+    const name = newProjectName.trim();
+    if (!name || isCreatingProject) return;
+    setIsCreatingProject(true);
+    setError(null);
+    const result = await createProject({ name });
+    setIsCreatingProject(false);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    const nextProjects = upsertById(classificationOptions.projects, result.data);
+    onClassificationOptionsChange({
+      ...classificationOptions,
+      projects: nextProjects,
+    });
+    setProjectId(result.data.id);
+    setNewProjectName("");
+  }
+
+  async function handleCreateTag() {
+    const name = newTagName.trim();
+    if (!name || isCreatingTag) return;
+    setIsCreatingTag(true);
+    setError(null);
+    const result = await createTag({ name });
+    setIsCreatingTag(false);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    const nextTags = upsertById(classificationOptions.tags, result.data);
+    onClassificationOptionsChange({
+      ...classificationOptions,
+      tags: nextTags,
+    });
+    setTagIds((prev) => new Set(prev).add(result.data.id));
+    setNewTagName("");
   }
 
   return (
@@ -213,6 +295,90 @@ export function TaskFormModal(props: Props) {
             </div>
           </div>
 
+          {/* プロジェクト */}
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="task-project">プロジェクト</Label>
+            <select
+              id="task-project"
+              value={projectId}
+              onChange={(e) => setProjectId(e.target.value)}
+              disabled={isSubmitting}
+              className="h-9 rounded-md border border-[var(--fl-border)] bg-transparent px-3 text-sm text-[var(--fl-text)] outline-none focus:border-[var(--fl-brand)]"
+            >
+              <option value="">プロジェクトなし</option>
+              {classificationOptions.projects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.name}
+                </option>
+              ))}
+            </select>
+            <div className="flex gap-2">
+              <Input
+                value={newProjectName}
+                onChange={(e) => setNewProjectName(e.target.value)}
+                placeholder="新しいプロジェクト"
+                disabled={isSubmitting || isCreatingProject}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCreateProject}
+                disabled={!newProjectName.trim() || isCreatingProject}
+              >
+                作成
+              </Button>
+            </div>
+          </div>
+
+          {/* タグ */}
+          <div className="flex flex-col gap-1.5">
+            <Label>タグ</Label>
+            <div className="flex flex-wrap gap-2">
+              {classificationOptions.tags.length === 0 ? (
+                <span className="text-xs text-[var(--fl-text-subtle)]">
+                  タグはまだありません
+                </span>
+              ) : (
+                classificationOptions.tags.map((tag) => {
+                  const active = tagIds.has(tag.id);
+                  return (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      onClick={() => toggleTag(tag.id)}
+                      aria-pressed={active}
+                      disabled={isSubmitting}
+                      className={cn(
+                        "h-7 rounded-[5px] border px-2 font-mono text-[11px] transition-colors disabled:opacity-50",
+                        active
+                          ? "border-[var(--fl-brand)] bg-[var(--fl-brand-ghost)] text-[var(--fl-brand)]"
+                          : "border-[var(--fl-border)] text-[var(--fl-text-muted)] hover:bg-[var(--fl-hover)]",
+                      )}
+                    >
+                      #{tag.name}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Input
+                value={newTagName}
+                onChange={(e) => setNewTagName(e.target.value)}
+                placeholder="新しいタグ"
+                disabled={isSubmitting || isCreatingTag}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCreateTag}
+                disabled={!newTagName.trim() || isCreatingTag}
+              >
+                作成
+              </Button>
+            </div>
+          </div>
+
           {/* エラー表示 */}
           {error && (
             <p className="text-sm text-[var(--fl-danger)]" role="alert">
@@ -247,4 +413,15 @@ export function TaskFormModal(props: Props) {
       </DialogContent>
     </Dialog>
   );
+}
+
+function upsertById<T extends ProjectSummary | TagSummary>(
+  items: T[],
+  item: T,
+): T[] {
+  const exists = items.some((current) => current.id === item.id);
+  const next = exists
+    ? items.map((current) => (current.id === item.id ? item : current))
+    : [...items, item];
+  return [...next].sort((a, b) => a.name.localeCompare(b.name, "ja"));
 }

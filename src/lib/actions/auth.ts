@@ -85,6 +85,16 @@ export async function register(input: RegisterInput): Promise<ActionResult> {
   // 既存メールでも列挙攻撃を避けるため成功時と同じ応答を返す（内部では何もしない）。
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
+    if (!existing.emailVerified) {
+      const token = await issueToken(VERIFY_PREFIX, email, VERIFY_TTL_MS);
+      const sent = await sendAuthEmail(() =>
+        sendVerificationEmail(
+          email,
+          `${baseUrl()}/verify-email?token=${token}`,
+        ),
+      );
+      if (!sent.ok) return sent;
+    }
     return { ok: true, data: undefined };
   }
 
@@ -94,12 +104,26 @@ export async function register(input: RegisterInput): Promise<ActionResult> {
   });
 
   const token = await issueToken(VERIFY_PREFIX, email, VERIFY_TTL_MS);
-  await sendVerificationEmail(
-    email,
-    `${baseUrl()}/verify-email?token=${token}`,
+  const sent = await sendAuthEmail(() =>
+    sendVerificationEmail(email, `${baseUrl()}/verify-email?token=${token}`),
   );
+  if (!sent.ok) return sent;
 
   return { ok: true, data: undefined };
+}
+
+async function sendAuthEmail(send: () => Promise<void>): Promise<ActionResult> {
+  try {
+    await send();
+    return { ok: true, data: undefined };
+  } catch (error) {
+    console.error("[auth email] メール送信に失敗しました", error);
+    return {
+      ok: false,
+      error:
+        "確認メールの送信に失敗しました。時間をおいて再度お試しください。",
+    };
+  }
 }
 
 // メール確認。token を検証し emailVerified に日時をセットする。

@@ -16,6 +16,17 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## Environment Variables
+
+メール確認を実送信する場合は、Resend の API キーに加えて検証済みドメインの送信元を設定してください。
+
+```bash
+RESEND_API_KEY="re_..."
+EMAIL_FROM="FocusLog <noreply@your-domain.example>"
+```
+
+`EMAIL_FROM` を未設定にすると `onboarding@resend.dev` を使いますが、この送信元は Resend アカウント所有者宛などに制限されるため、一般ユーザーには届かない場合があります。
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.

@@ -12,6 +12,7 @@ import {
   sendVerificationEmail,
   sendPasswordResetEmail,
 } from "@/lib/auth/email";
+import { normalizeEmail, reserveEmailSend } from "@/lib/auth/email-rate-limit";
 import {
   loginSchema,
   registerSchema,
@@ -86,13 +87,7 @@ export async function register(input: RegisterInput): Promise<ActionResult> {
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
     if (!existing.emailVerified) {
-      const token = await issueToken(VERIFY_PREFIX, email, VERIFY_TTL_MS);
-      const sent = await sendAuthEmail(() =>
-        sendVerificationEmail(
-          email,
-          `${baseUrl()}/verify-email?token=${token}`,
-        ),
-      );
+      const sent = await sendVerificationIfAllowed(email);
       if (!sent.ok) return sent;
     }
     return { ok: true, data: undefined };
@@ -103,13 +98,22 @@ export async function register(input: RegisterInput): Promise<ActionResult> {
     data: { name, email, passwordHash, emailVerified: null },
   });
 
-  const token = await issueToken(VERIFY_PREFIX, email, VERIFY_TTL_MS);
-  const sent = await sendAuthEmail(() =>
-    sendVerificationEmail(email, `${baseUrl()}/verify-email?token=${token}`),
-  );
+  const sent = await sendVerificationIfAllowed(email);
   if (!sent.ok) return sent;
 
   return { ok: true, data: undefined };
+}
+
+// 回数制限に達していたら送らずに成功扱いにする（登録有無を外部に漏らさないため）。
+// 制限中は新しいトークンも発行しない。発行すると直前に届いたメールのリンクが無効になるため。
+async function sendVerificationIfAllowed(email: string): Promise<ActionResult> {
+  if (!(await reserveEmailSend(email, "verify"))) {
+    return { ok: true, data: undefined };
+  }
+  const token = await issueToken(VERIFY_PREFIX, email, VERIFY_TTL_MS);
+  return sendAuthEmail(() =>
+    sendVerificationEmail(email, `${baseUrl()}/verify-email?token=${token}`),
+  );
 }
 
 async function sendAuthEmail(send: () => Promise<void>): Promise<ActionResult> {
@@ -167,12 +171,17 @@ export async function requestPasswordReset(
   }
 
   const { email } = parsed.data;
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (user) {
+  const user = await prisma.user.findUnique({
+    where: { email },
+    select: { id: true },
+  });
+  // 制限中はトークンを発行せず、直前に届いたメールのリンクを有効なまま残す。
+  if (user && (await reserveEmailSend(email, "reset"))) {
     const token = await issueToken(RESET_PREFIX, email, RESET_TTL_MS);
-    await sendPasswordResetEmail(
-      email,
-      `${baseUrl()}/reset-password?token=${token}`,
+    // 送信に失敗しても応答は変えない。変えると「エラーになる＝登録済み」と判別できてしまう。
+    // 失敗の原因は sendAuthEmail がサーバーログに残す。
+    await sendAuthEmail(() =>
+      sendPasswordResetEmail(email, `${baseUrl()}/reset-password?token=${token}`),
     );
   }
 
@@ -290,6 +299,10 @@ export async function deleteAccountAction(
           in: [`${VERIFY_PREFIX}${current.email}`, `${RESET_PREFIX}${current.email}`],
         },
       },
+    });
+    // 退会後に宛先を残さないよう、送信履歴も一緒に消す。
+    await tx.emailSendLog.deleteMany({
+      where: { email: normalizeEmail(current.email) },
     });
     await tx.user.delete({ where: { id: current.id } });
   });

@@ -66,6 +66,20 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+// 認証メール（確認・パスワード再設定）の送信履歴。宛先ごとの送信回数制限に使う。
+// 行は追記のみで更新しないため updatedAt は持たない。
+// 未登録・退会済みのアドレスも扱うため User への外部キーは張らない。
+// 24時間より古い行は書き込みのたびに削除するので、テーブルは常に小さく保たれる。
+model EmailSendLog {
+  id        String   @id @default(cuid())
+  email     String // 小文字に正規化した宛先
+  purpose   String // "verify" | "reset"
+  createdAt DateTime @default(now())
+
+  @@index([email, purpose, createdAt]) // 宛先・用途ごとの直近履歴の取得
+  @@index([createdAt]) // 古い履歴の一括削除
+}
+
 // ---------- アプリ系 ----------
 model Task {
   id          String     @id @default(cuid())

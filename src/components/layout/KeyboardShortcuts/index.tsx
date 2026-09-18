@@ -9,6 +9,7 @@ import {
   isInteractiveTarget,
   isTypingTarget,
 } from "@/lib/utils/keyboard";
+import { useSearchShortcutStore } from "@/stores/search-shortcut-store";
 import { useTaskPageUiStore } from "@/stores/task-page-ui-store";
 import { useTimerStore } from "@/stores/timer-store";
 
@@ -22,8 +23,9 @@ const SEQUENCE_TIMEOUT_MS = 1_000;
  *
  * - N: 新規タスクの作成を開く（タスク画面以外ならタスク画面へ移動して開く）
  * - Space: 計測中なら停止、していなければ直前に計測していた未完了タスクを再開
- * - G → R: レポート画面へ移動
- * - ⌘K / Ctrl+K: タスク検索を開く（タスク画面以外ならタスク画面へ移動して開く）
+ * - G → R: レポート画面へ移動（⌘R / Ctrl+R はブラウザの再読み込みなので使わない）
+ * - ⌘F / Ctrl+F: 検索欄のある画面でだけ、その画面の検索を開く。検索欄のない画面では
+ *   奪わずにブラウザ標準のページ内検索を使えるようにする
  *
  * 文字入力中・IME 変換中・ダイアログ表示中は反応しない。
  * 画面を持たないため何も描画しない。
@@ -36,14 +38,14 @@ export function KeyboardShortcuts() {
   // Space の連打で開始・停止の処理が重ならないようにする
   const isTogglingTimer = useRef(false);
 
-  // タスク画面を離れたら作成モーダル・検索欄の開閉をリセットする（開いたままだと、
+  // タスク画面を離れたら作成モーダルの開閉をリセットする（開いたままだと、
   // 次にタスク画面へ来たときに勝手に開くため）。
   // TasksPageClient のアンマウント時に行うと、開発環境の Strict Mode がマウント直後に
   // 後処理を1回挟むため、他画面から「開いて」遷移してきた直後に打ち消されてしまう。
   // URL の変化で判定すれば、遷移先がタスク画面のときは何もしないので打ち消さない。
   useEffect(() => {
     if (pathname === TASKS_PATH) return;
-    useTaskPageUiStore.setState({ isCreateOpen: false, isSearchOpen: false });
+    useTaskPageUiStore.setState({ isCreateOpen: false });
   }, [pathname]);
 
   useEffect(() => {
@@ -85,12 +87,14 @@ export function KeyboardShortcuts() {
 
       const key = e.key.toLowerCase();
 
-      // ⌘K / Ctrl+K は検索欄の入力中でも受け付ける（従来のタスク画面の挙動を維持）
-      if ((e.metaKey || e.ctrlKey) && key === "k") {
+      // ⌘F / Ctrl+F は、検索欄のある画面が登録しているときだけ奪う。
+      // 登録がなければ preventDefault せず、ブラウザのページ内検索に任せる。
+      // 検索欄への入力中でも受け付ける（開いた検索欄へフォーカスを戻せるように）
+      if ((e.metaKey || e.ctrlKey) && !e.altKey && key === "f") {
+        const openSearch = useSearchShortcutStore.getState().openSearch;
+        if (!openSearch) return;
         e.preventDefault();
-        openOnTasksPage(() =>
-          useTaskPageUiStore.getState().setSearchOpen(true),
-        );
+        openSearch();
         return;
       }
 

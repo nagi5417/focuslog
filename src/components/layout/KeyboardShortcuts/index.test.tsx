@@ -21,6 +21,7 @@ vi.mock("sonner", () => ({
 import { toast } from "sonner";
 import { KeyboardShortcuts } from "@/components/layout/KeyboardShortcuts";
 import { resumeLastTimer, stopTimer } from "@/lib/actions/timer";
+import { useSearchShortcutStore } from "@/stores/search-shortcut-store";
 import { useTaskPageUiStore } from "@/stores/task-page-ui-store";
 import { useTimerStore } from "@/stores/timer-store";
 
@@ -28,12 +29,13 @@ const mockResumeLastTimer = vi.mocked(resumeLastTimer);
 const mockStopTimer = vi.mocked(stopTimer);
 const mockToastInfo = vi.mocked(toast.info);
 
+// 押下したキーイベントが preventDefault されずに残ったか（= ブラウザ標準の動作に任せたか）を返す
 function press(
   key: string,
   init: KeyboardEventInit = {},
   target: Element = document.body,
-) {
-  fireEvent.keyDown(target, { key, ...init });
+): boolean {
+  return fireEvent.keyDown(target, { key, ...init });
 }
 
 function appendElement(html: string): HTMLElement {
@@ -46,7 +48,8 @@ function appendElement(html: string): HTMLElement {
 beforeEach(() => {
   vi.clearAllMocks();
   mockPathname = "/tasks";
-  useTaskPageUiStore.setState({ isCreateOpen: false, isSearchOpen: false });
+  useTaskPageUiStore.setState({ isCreateOpen: false });
+  useSearchShortcutStore.setState({ openSearch: null });
   useTimerStore.setState({
     runningTaskId: null,
     runningTaskTitle: "",
@@ -85,32 +88,57 @@ describe("N: 新規タスク", () => {
   });
 });
 
-describe("⌘K / Ctrl+K: 検索", () => {
-  it("⌘K で検索を開くこと", () => {
+describe("⌘F / Ctrl+F: 検索", () => {
+  it("検索欄を登録している画面では ⌘F でその画面の検索を開き、ブラウザの検索を止めること", () => {
+    const openSearch = vi.fn();
+    useSearchShortcutStore.getState().registerSearch(openSearch);
     render(<KeyboardShortcuts />);
 
-    press("k", { metaKey: true });
+    const notPrevented = press("f", { metaKey: true });
 
-    expect(useTaskPageUiStore.getState().isSearchOpen).toBe(true);
+    expect(openSearch).toHaveBeenCalledTimes(1);
+    expect(notPrevented).toBe(false);
   });
 
-  it("タスク画面以外で Ctrl+K を押すとタスク画面へ移動して検索を開くこと", () => {
-    mockPathname = "/settings";
+  it("Windows の Ctrl+F でも開くこと", () => {
+    const openSearch = vi.fn();
+    useSearchShortcutStore.getState().registerSearch(openSearch);
     render(<KeyboardShortcuts />);
 
-    press("k", { ctrlKey: true });
+    press("f", { ctrlKey: true });
 
-    expect(useTaskPageUiStore.getState().isSearchOpen).toBe(true);
-    expect(mockPush).toHaveBeenCalledWith("/tasks");
+    expect(openSearch).toHaveBeenCalledTimes(1);
   });
 
-  it("検索欄に入力中でも受け付けること", () => {
+  it("検索欄のない画面では ⌘F を奪わず、ブラウザのページ内検索に任せること", () => {
+    mockPathname = "/reports";
+    render(<KeyboardShortcuts />);
+
+    const notPrevented = press("f", { metaKey: true });
+
+    expect(notPrevented).toBe(true);
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it("検索欄に入力中でも受け付けること（開いた検索欄へフォーカスを戻せるように）", () => {
+    const openSearch = vi.fn();
+    useSearchShortcutStore.getState().registerSearch(openSearch);
     render(<KeyboardShortcuts />);
     const input = appendElement('<input type="text" />');
 
-    press("k", { metaKey: true }, input);
+    press("f", { metaKey: true }, input);
 
-    expect(useTaskPageUiStore.getState().isSearchOpen).toBe(true);
+    expect(openSearch).toHaveBeenCalledTimes(1);
+  });
+
+  it("修飾キーなしの F は検索を開かないこと", () => {
+    const openSearch = vi.fn();
+    useSearchShortcutStore.getState().registerSearch(openSearch);
+    render(<KeyboardShortcuts />);
+
+    press("f");
+
+    expect(openSearch).not.toHaveBeenCalled();
   });
 });
 
@@ -214,14 +242,13 @@ describe("Space: 計測の開始・停止", () => {
 });
 
 describe("タスク画面の開閉状態のリセット", () => {
-  it("タスク画面以外にいるときは、開いたままの作成・検索をリセットすること", () => {
-    useTaskPageUiStore.setState({ isCreateOpen: true, isSearchOpen: true });
+  it("タスク画面以外にいるときは、開いたままの作成モーダルをリセットすること", () => {
+    useTaskPageUiStore.setState({ isCreateOpen: true });
     mockPathname = "/reports";
 
     render(<KeyboardShortcuts />);
 
     expect(useTaskPageUiStore.getState().isCreateOpen).toBe(false);
-    expect(useTaskPageUiStore.getState().isSearchOpen).toBe(false);
   });
 
   it("タスク画面へ遷移してきたときは、他画面で立てた「開いて」を打ち消さないこと", () => {
@@ -254,14 +281,16 @@ describe("反応しない状況", () => {
   });
 
   it("ダイアログ表示中は反応しないこと", () => {
+    const openSearch = vi.fn();
+    useSearchShortcutStore.getState().registerSearch(openSearch);
     render(<KeyboardShortcuts />);
     appendElement('<div role="dialog"></div>');
 
     press("n");
-    press("k", { metaKey: true });
+    press("f", { metaKey: true });
 
     expect(useTaskPageUiStore.getState().isCreateOpen).toBe(false);
-    expect(useTaskPageUiStore.getState().isSearchOpen).toBe(false);
+    expect(openSearch).not.toHaveBeenCalled();
   });
 
   it("キーの押しっぱなし（repeat）は無視すること", () => {

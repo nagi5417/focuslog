@@ -12,7 +12,6 @@ type ShortcutSettingsProps = {
 };
 
 const TITLE_ID = "shortcut-settings-title";
-const DESCRIPTION_ID = "shortcut-settings-description";
 
 /**
  * キーボードショートカットのオン・オフ。
@@ -43,29 +42,18 @@ export function ShortcutSettings({ initialEnabled }: ShortcutSettingsProps) {
   }
 
   return (
-    <div className="flex items-start justify-between gap-4 p-4">
-      <div>
-        <h3
-          id={TITLE_ID}
-          className="text-[13.5px] font-[500] text-[var(--fl-text)]"
-        >
-          キーボードショートカット
-        </h3>
-        <p
-          id={DESCRIPTION_ID}
-          className="mt-0.5 text-[12px] text-[var(--fl-text-muted)]"
-        >
-          N で新規タスク、F で検索、Space で計測の開始・停止、G → R
-          でレポートへ移動します。音声入力などで誤って反応する場合はオフにしてください。
-        </p>
-      </div>
+    <div className="flex items-center justify-between gap-4 p-4">
+      <h3
+        id={TITLE_ID}
+        className="text-[13.5px] font-[500] text-[var(--fl-text)]"
+      >
+        キーボードショートカット
+      </h3>
       <Switch
         checked={enabled}
         onCheckedChange={handleChange}
         disabled={isPending}
         aria-labelledby={TITLE_ID}
-        aria-describedby={DESCRIPTION_ID}
-        className="mt-0.5"
       />
     </div>
   );

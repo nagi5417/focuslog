@@ -70,12 +70,4 @@ describe("ShortcutSettings", () => {
     expect(getSwitch()).toHaveAttribute("aria-checked", "true");
     expect(mocks.refresh).not.toHaveBeenCalled();
   });
-
-  it("説明文をスイッチに関連付け、スクリーンリーダーで読み上げられるようにすること", () => {
-    render(<ShortcutSettings initialEnabled />);
-
-    expect(getSwitch()).toHaveAccessibleDescription(
-      /音声入力などで誤って反応する場合はオフにしてください/,
-    );
-  });
 });

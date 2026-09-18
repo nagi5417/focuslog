@@ -55,6 +55,13 @@ export function jstEndOfToday(nowMs: number): Date {
   return new Date(endOfDay.getTime() - JST_OFFSET);
 }
 
+// 計測の開始時刻が今日（JST）かどうか。
+// レポート画面・ログ画面と同じく、開始時刻が今日の計測記録を「今日の計測」として数えるために使う。
+export function isStartedToday(startedAtMs: number, nowMs: number): boolean {
+  const start = jstStartOfToday(nowMs).getTime();
+  return startedAtMs >= start && startedAtMs < start + ONE_DAY_MS;
+}
+
 // 期限の相対表示（"今日" / "明日" / "M/dd" / ""）。nowMs 基準で判定
 export function formatDue(dueDate: string | null, nowMs: number): string {
   if (!dueDate) return "";

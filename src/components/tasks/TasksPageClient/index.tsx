@@ -10,6 +10,7 @@ import {
 } from "@/lib/task-transform";
 import { useTaskActions } from "@/hooks/useTaskActions";
 import { useTimerSync } from "@/hooks/useTimerSync";
+import { useTodayTrackedSec } from "@/hooks/useTodayTrackedSec";
 import { fmtDate, fmtShort } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import {
@@ -34,6 +35,8 @@ type Props = {
   initialTasks: Task[];
   initialActiveTimer: ActiveTimer | null;
   initialClassificationOptions: TaskClassificationOptions;
+  // 今日開始・停止済みの計測時間（秒）。サーバーで集計した値
+  initialTodayTrackedSec: number;
   nowMs: number;
 };
 
@@ -56,6 +59,7 @@ export function TasksPageClient({
   initialTasks,
   initialActiveTimer,
   initialClassificationOptions,
+  initialTodayTrackedSec,
   nowMs,
 }: Props) {
   const {
@@ -84,11 +88,13 @@ export function TasksPageClient({
   const searchRef = useRef<HTMLInputElement>(null);
 
   // タイマーの表示同期（毎秒 tick・初期復元・停止時の elapsed 加算）はフックに集約
-  const { liveElapsed, runningTaskId } = useTimerSync(
+  const { liveElapsed } = useTimerSync(
     initialTasks,
     initialActiveTimer,
     setTasks,
   );
+  // ヘッダーの「計測」は今日実際に計測した時間（タスクの累計時間ではない）
+  const todayTrackedSec = useTodayTrackedSec(initialTodayTrackedSec, nowMs);
 
   // ⌘K / Ctrl+K で検索を開いてフォーカス
   useEffect(() => {
@@ -138,13 +144,6 @@ export function TasksPageClient({
   const completionPct = dueToday.length
     ? Math.round((doneCount / dueToday.length) * 100)
     : 0;
-  // 計測時間は従来の範囲（今日期限 + 期限切れ）を維持する
-  const totalElapsed = tasks
-    .filter((t) => ["today", "overdue"].includes(toDueBucket(t.dueDate, nowMs)))
-    .reduce(
-      (s, t) => s + (t.id === runningTaskId ? liveElapsed : t.elapsed),
-      0,
-    );
 
   const dateStr = fmtDate(new Date(nowMs));
 
@@ -197,7 +196,7 @@ export function TasksPageClient({
             <span>
               / 完了 {doneCount}件 ({completionPct}%)
             </span>
-            <span>· 計測 {fmtShort(totalElapsed)}</span>
+            <span>· 計測 {fmtShort(todayTrackedSec)}</span>
           </p>
         </div>
         <div className="flex items-center gap-2 sm:mt-0.5">

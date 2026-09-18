@@ -4,7 +4,13 @@ import { create } from "zustand";
 
 // 直近で停止（または別タスクへ切替）した計測の記録。
 // seq は単調増加し、購読側が「未処理の停止か」を判定するために使う。
-type LastStopped = { taskId: string; seconds: number; seq: number };
+// startedAtMs は「今日開始の計測か」の判定に使う（ヘッダーの今日の計測時間）。
+type LastStopped = {
+  taskId: string;
+  seconds: number;
+  startedAtMs: number;
+  seq: number;
+};
 
 type TimerStore = {
   runningTaskId: string | null;
@@ -39,7 +45,13 @@ export const useTimerStore = create<TimerStore>((set, get) => ({
       accumulated: prevId === taskId ? get().accumulated : 0,
       startedAtMs: nowMs,
       lastStopped: switching
-        ? { taskId: prevId as string, seconds: get().getElapsed(), seq }
+        ? {
+            taskId: prevId as string,
+            seconds: get().getElapsed(),
+            // 切替前の計測の開始時刻（ここで上書きする前の値）
+            startedAtMs: get().startedAtMs ?? nowMs,
+            seq,
+          }
         : get().lastStopped,
       stopSeq: seq,
     });
@@ -56,15 +68,16 @@ export const useTimerStore = create<TimerStore>((set, get) => ({
       });
       return;
     }
-    // 計測秒数を確定してから状態をリセット（購読側が elapsed に加算する）
+    // 計測秒数と開始時刻を確定してから状態をリセット（購読側が elapsed に加算する）
     const seconds = get().getElapsed();
+    const startedAtMs = get().startedAtMs ?? Date.now();
     const seq = get().stopSeq + 1;
     set({
       runningTaskId: null,
       runningTaskTitle: "",
       startedAtMs: null,
       accumulated: 0,
-      lastStopped: { taskId: prevId, seconds, seq },
+      lastStopped: { taskId: prevId, seconds, startedAtMs, seq },
       stopSeq: seq,
     });
   },

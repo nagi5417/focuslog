@@ -3,6 +3,7 @@ export type ActionResult<T = void> =
   | { ok: false; error: string; fieldErrors?: Record<string, string[]> };
 
 export type {
+  DueBucket,
   Priority,
   ProjectSummary,
   Section,

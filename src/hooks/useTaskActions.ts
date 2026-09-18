@@ -17,7 +17,9 @@ export function useTaskActions(initialTasks: Task[]) {
   const { runningTaskId, stop } = useTimerStore();
 
   async function handleToggleDone(id: string) {
-    // status を TODO ⇄ DONE でトグル（2 回適用すると元に戻るのでロールバックにも使える）
+    // status を TODO ⇄ DONE でトグル（2 回適用すると元に戻るのでロールバックにも使える）。
+    // セクションは status と dueDate から都度算出されるため、
+    // ここで status を書き換えるだけで完了セクションへの移動・復帰が反映される。
     const toggle = (t: Task): Task =>
       t.id === id ? { ...t, status: isDone(t.status) ? "TODO" : "DONE" } : t;
     // 楽観的更新
@@ -34,7 +36,7 @@ export function useTaskActions(initialTasks: Task[]) {
   }
 
   function handleUpdated(updated: Task) {
-    // 期限変更による today/other の振り分けは再レンダリングで自動反映される
+    // 期限変更によるセクションの振り分けは再レンダリングで自動反映される
     setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
   }
 

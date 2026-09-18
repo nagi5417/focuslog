@@ -1,9 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
 import { Filter, Search, Plus, X } from "lucide-react";
-import { isDone, toPriorityLabel, toSection } from "@/lib/task-transform";
+import {
+  groupBySection,
+  isDone,
+  toDueBucket,
+  toPriorityLabel,
+} from "@/lib/task-transform";
 import { useTaskActions } from "@/hooks/useTaskActions";
 import { useTimerSync } from "@/hooks/useTimerSync";
 import { fmtDate, fmtShort } from "@/lib/format";
@@ -15,10 +19,15 @@ import {
 } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SectionCard } from "@/components/tasks/SectionCard";
-import { TaskRow } from "@/components/tasks/TaskRow";
+import { TaskSectionList } from "@/components/tasks/TaskSectionList";
 import { TaskFormModal } from "@/components/tasks/TaskFormModal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import type { Priority, Task, TaskClassificationOptions } from "@/types/task";
+import type {
+  Priority,
+  Section,
+  Task,
+  TaskClassificationOptions,
+} from "@/types/task";
 import type { ActiveTimer } from "@/lib/actions/timer";
 
 type Props = {
@@ -28,7 +37,14 @@ type Props = {
   nowMs: number;
 };
 
-const TRANSITION = { duration: 0.42, ease: [0.2, 0.85, 0.2, 1] as const };
+// 表示順と既定の開閉。期限切れ・今日だけを開いておき、残りは折りたたむ
+const SECTIONS: { key: Section; title: string; defaultOpen: boolean }[] = [
+  { key: "overdue", title: "期限切れ", defaultOpen: true },
+  { key: "today", title: "今日のタスク", defaultOpen: true },
+  { key: "upcoming", title: "今後のタスク", defaultOpen: false },
+  { key: "undated", title: "日付未設定のタスク", defaultOpen: false },
+  { key: "done", title: "完了したタスク", defaultOpen: false },
+];
 
 const PRIORITY_FILTERS: { prio: Priority; label: string; dot: string }[] = [
   { prio: "high", label: "高", dot: "bg-pri-high" },
@@ -101,30 +117,34 @@ export function TasksPageClient({
     return byQuery && byPriority && byProject && byTags;
   };
 
-  // today / other に分けて done 順でソート
-  const sorted = (arr: Task[]) =>
-    [...arr].sort(
-      (a, b) => Number(isDone(a.status)) - Number(isDone(b.status)),
-    );
-  const today = sorted(
-    tasks.filter((t) => toSection(t.dueDate, nowMs) === "today" && matches(t)),
-  );
-  const other = sorted(
-    tasks.filter((t) => toSection(t.dueDate, nowMs) === "other" && matches(t)),
-  );
+  // 検索・フィルタを適用してから5セクションへ振り分ける（各セクション内の並び替えも済む）
+  const sections = groupBySection(tasks.filter(matches), nowMs);
 
-  // ヘッダー統計は絞り込み前の「今日」全体を対象にする
-  const allToday = tasks.filter((t) => toSection(t.dueDate, nowMs) === "today");
-  const doneCount = allToday.filter((t) => isDone(t.status)).length;
-  const completionPct = allToday.length
-    ? Math.round((doneCount / allToday.length) * 100)
-    : 0;
-  const totalElapsed = allToday.reduce(
-    (s, t) => s + (t.id === runningTaskId ? liveElapsed : t.elapsed),
-    0,
-  );
   const activeFilterCount =
     priorityFilter.size + tagFilter.size + (projectFilter ? 1 : 0);
+  const isNarrowed = activeFilterCount > 0 || query.trim() !== "";
+  const emptyLabel = isNarrowed
+    ? "条件に一致するタスクがありません"
+    : "タスクはありません";
+
+  // ヘッダー統計は絞り込み前の全タスクを、完了状態を見ない toDueBucket で数える
+  const dueToday = tasks.filter(
+    (t) => toDueBucket(t.dueDate, nowMs) === "today",
+  );
+  const overdueCount = tasks.filter(
+    (t) => toDueBucket(t.dueDate, nowMs) === "overdue" && !isDone(t.status),
+  ).length;
+  const doneCount = dueToday.filter((t) => isDone(t.status)).length;
+  const completionPct = dueToday.length
+    ? Math.round((doneCount / dueToday.length) * 100)
+    : 0;
+  // 計測時間は従来の範囲（今日期限 + 期限切れ）を維持する
+  const totalElapsed = tasks
+    .filter((t) => ["today", "overdue"].includes(toDueBucket(t.dueDate, nowMs)))
+    .reduce(
+      (s, t) => s + (t.id === runningTaskId ? liveElapsed : t.elapsed),
+      0,
+    );
 
   const dateStr = fmtDate(new Date(nowMs));
 
@@ -171,9 +191,13 @@ export function TasksPageClient({
               {dateStr}
             </span>
           </h1>
-          <p className="mt-0.5 text-[12px] text-[var(--fl-text-muted)] font-mono">
-            今日 {allToday.length}件 / 完了 {doneCount}件 ({completionPct}%) ·
-            計測 {fmtShort(totalElapsed)}
+          <p className="mt-0.5 flex flex-wrap gap-x-1 text-[12px] text-[var(--fl-text-muted)] font-mono">
+            <span>今日 {dueToday.length}件</span>
+            <span>/ 期限切れ {overdueCount}件</span>
+            <span>
+              / 完了 {doneCount}件 ({completionPct}%)
+            </span>
+            <span>· 計測 {fmtShort(totalElapsed)}</span>
           </p>
         </div>
         <div className="flex items-center gap-2 sm:mt-0.5">
@@ -208,7 +232,9 @@ export function TasksPageClient({
                 <span className="text-[12px] font-[500] text-[var(--fl-text)]">
                   絞り込み
                 </span>
-                {(priorityFilter.size > 0 || projectFilter || tagFilter.size > 0) && (
+                {(priorityFilter.size > 0 ||
+                  projectFilter ||
+                  tagFilter.size > 0) && (
                   <button
                     onClick={clearFilters}
                     className="text-[11px] text-[var(--fl-text-muted)] hover:text-[var(--fl-text)] cursor-pointer"
@@ -238,19 +264,19 @@ export function TasksPageClient({
                 <span className="text-[11px] text-[var(--fl-text-subtle)]">
                   優先度
                 </span>
-              {PRIORITY_FILTERS.map(({ prio, label, dot }) => (
-                <label
-                  key={prio}
-                  className="flex items-center gap-2 py-1 cursor-pointer text-[13px] text-[var(--fl-text)]"
-                >
-                  <Checkbox
-                    checked={priorityFilter.has(prio)}
-                    onCheckedChange={() => togglePriority(prio)}
-                  />
-                  <span className={cn("size-1.5 rounded-full", dot)} />
-                  {label}
-                </label>
-              ))}
+                {PRIORITY_FILTERS.map(({ prio, label, dot }) => (
+                  <label
+                    key={prio}
+                    className="flex items-center gap-2 py-1 cursor-pointer text-[13px] text-[var(--fl-text)]"
+                  >
+                    <Checkbox
+                      checked={priorityFilter.has(prio)}
+                      onCheckedChange={() => togglePriority(prio)}
+                    />
+                    <span className={cn("size-1.5 rounded-full", dot)} />
+                    {label}
+                  </label>
+                ))}
               </div>
               <div className="mt-2 flex flex-col gap-1">
                 <span className="text-[11px] text-[var(--fl-text-subtle)]">
@@ -342,59 +368,30 @@ export function TasksPageClient({
         data-testid="tasks-scroll-container"
         className="flex-1 overflow-y-auto px-4 py-4 space-y-3 sm:px-6"
       >
-        {/* 今日のタスク */}
-        <SectionCard title="今日のタスク" count={today.length} defaultOpen>
-          <AnimatePresence initial={false}>
-            {today.map((task) => (
-              <motion.div
-                key={task.id}
-                layout
-                initial={{ opacity: 0, y: -6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={TRANSITION}
-              >
-                <TaskRow
-                  task={task}
-                  liveElapsed={liveElapsed}
-                  nowMs={nowMs}
-                  onToggleDone={handleToggleDone}
-                  onEdit={setEditingTask}
-                  onRequestDelete={setDeletingTask}
-                />
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </SectionCard>
-
-        {/* その他のタスク */}
-        <SectionCard
-          title="その他のタスク"
-          count={other.length}
-          defaultOpen={false}
-        >
-          <AnimatePresence initial={false}>
-            {other.map((task) => (
-              <motion.div
-                key={task.id}
-                layout
-                initial={{ opacity: 0, y: -6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={TRANSITION}
-              >
-                <TaskRow
-                  task={task}
-                  liveElapsed={liveElapsed}
-                  nowMs={nowMs}
-                  onToggleDone={handleToggleDone}
-                  onEdit={setEditingTask}
-                  onRequestDelete={setDeletingTask}
-                />
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </SectionCard>
+        {SECTIONS.map(({ key, title, defaultOpen }) => {
+          // 期限切れは平常時に0件なら描画しない（通常状態でノイズを増やさない）
+          if (key === "overdue" && sections.overdue.length === 0 && !isNarrowed) {
+            return null;
+          }
+          return (
+            <SectionCard
+              key={key}
+              title={title}
+              count={sections[key].length}
+              defaultOpen={defaultOpen}
+            >
+              <TaskSectionList
+                tasks={sections[key]}
+                liveElapsed={liveElapsed}
+                nowMs={nowMs}
+                emptyLabel={emptyLabel}
+                onToggleDone={handleToggleDone}
+                onEdit={setEditingTask}
+                onRequestDelete={setDeletingTask}
+              />
+            </SectionCard>
+          );
+        })}
 
         <div className="h-6" />
       </div>

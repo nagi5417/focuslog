@@ -1,5 +1,9 @@
 export type Priority = "high" | "mid" | "low";
-export type Section = "today" | "other";
+
+// 期限だけによる分類（完了状態は見ない）。ヘッダーの件数集計に使う
+export type DueBucket = "overdue" | "today" | "upcoming" | "undated";
+// 一覧の表示セクション。完了していれば期限に関係なく "done"
+export type Section = DueBucket | "done";
 
 export type Tag =
   | "review"
@@ -43,6 +47,7 @@ export type Task = {
   status: TaskStatus; // 生値（done は status === "DONE" で算出）
   dueDate: string | null; // ISO 文字列（Date は props 越えでシリアライズされるため文字列で保持）
   createdAt: string; // ISO 文字列
+  completedAt: string | null; // ISO 文字列。完了セクションの並び順に使う
   elapsed: number; // 完了済み TimeEntry.durationSec の合計（サーバー集計値）
   project: ProjectSummary | null;
   tags: TagSummary[];

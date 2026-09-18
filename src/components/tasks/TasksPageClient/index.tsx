@@ -39,6 +39,8 @@ type Props = {
   initialClassificationOptions: TaskClassificationOptions;
   // 今日開始・停止済みの計測時間（秒）。サーバーで集計した値
   initialTodayTrackedSec: number;
+  // 設定でショートカットを無効にしていたら、検索ボタンのキー表示（F）を出さない
+  shortcutsEnabled: boolean;
   nowMs: number;
 };
 
@@ -62,6 +64,7 @@ export function TasksPageClient({
   initialActiveTimer,
   initialClassificationOptions,
   initialTodayTrackedSec,
+  shortcutsEnabled,
   nowMs,
 }: Props) {
   const {
@@ -350,9 +353,11 @@ export function TasksPageClient({
             >
               <Search size={13} />
               検索
-              <kbd className="ml-0.5 hidden sm:inline-flex items-center justify-center h-[16px] px-1 rounded-[3px] border border-[var(--fl-border-strong)] font-mono text-[9px] text-[var(--fl-text-subtle)]">
-                F
-              </kbd>
+              {shortcutsEnabled && (
+                <kbd className="ml-0.5 hidden sm:inline-flex items-center justify-center h-[16px] px-1 rounded-[3px] border border-[var(--fl-border-strong)] font-mono text-[9px] text-[var(--fl-text-subtle)]">
+                  F
+                </kbd>
+              )}
             </button>
           )}
 

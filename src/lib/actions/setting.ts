@@ -8,7 +8,11 @@ import { prisma } from "@/lib/db";
 import { settingUpdateSchema } from "@/lib/validations/setting";
 import type { ActionResult } from "@/types";
 
-export type UserSetting = { theme: string; accent: string };
+export type UserSetting = {
+  theme: string;
+  accent: string;
+  shortcutsEnabled: boolean;
+};
 
 export async function getSetting(): Promise<UserSetting> {
   const user = await requireUser();
@@ -18,6 +22,7 @@ export async function getSetting(): Promise<UserSetting> {
   return {
     theme: setting?.theme ?? "system",
     accent: setting?.accent ?? "blue",
+    shortcutsEnabled: setting?.shortcutsEnabled ?? true,
   };
 }
 
@@ -46,5 +51,12 @@ export async function updateSetting(
     });
   }
   revalidatePath("/settings");
-  return { ok: true, data: { theme: updated.theme, accent: updated.accent } };
+  return {
+    ok: true,
+    data: {
+      theme: updated.theme,
+      accent: updated.accent,
+      shortcutsEnabled: updated.shortcutsEnabled,
+    },
+  };
 }

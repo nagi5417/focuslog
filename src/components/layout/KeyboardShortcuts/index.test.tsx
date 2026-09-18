@@ -69,7 +69,7 @@ afterEach(() => {
 
 describe("N: 新規タスク", () => {
   it("タスク画面では画面遷移せずに作成を開くこと", () => {
-    render(<KeyboardShortcuts />);
+    render(<KeyboardShortcuts enabled />);
 
     press("n");
 
@@ -79,7 +79,7 @@ describe("N: 新規タスク", () => {
 
   it("タスク画面以外ではタスク画面へ移動して作成を開くこと", () => {
     mockPathname = "/reports";
-    render(<KeyboardShortcuts />);
+    render(<KeyboardShortcuts enabled />);
 
     press("N");
 
@@ -92,7 +92,7 @@ describe("F: 検索", () => {
   it("検索欄を登録している画面では F でその画面の検索を開くこと", () => {
     const openSearch = vi.fn();
     useSearchShortcutStore.getState().registerSearch(openSearch);
-    render(<KeyboardShortcuts />);
+    render(<KeyboardShortcuts enabled />);
 
     const notPrevented = press("f");
 
@@ -103,7 +103,7 @@ describe("F: 検索", () => {
 
   it("検索欄のない画面では何もしないこと", () => {
     mockPathname = "/reports";
-    render(<KeyboardShortcuts />);
+    render(<KeyboardShortcuts enabled />);
 
     const notPrevented = press("f");
 
@@ -114,7 +114,7 @@ describe("F: 検索", () => {
   it("検索欄に入力中の F は文字として入力させ、奪わないこと", () => {
     const openSearch = vi.fn();
     useSearchShortcutStore.getState().registerSearch(openSearch);
-    render(<KeyboardShortcuts />);
+    render(<KeyboardShortcuts enabled />);
     const input = appendElement('<input type="text" />');
 
     const notPrevented = press("f", {}, input);
@@ -126,7 +126,7 @@ describe("F: 検索", () => {
   it("⌘F / Ctrl+F はブラウザのページ内検索に任せ、アプリでは扱わないこと", () => {
     const openSearch = vi.fn();
     useSearchShortcutStore.getState().registerSearch(openSearch);
-    render(<KeyboardShortcuts />);
+    render(<KeyboardShortcuts enabled />);
 
     const notPreventedMac = press("f", { metaKey: true });
     const notPreventedWin = press("f", { ctrlKey: true });
@@ -139,7 +139,7 @@ describe("F: 検索", () => {
 
 describe("G → R: レポートへ", () => {
   it("G の後に R を押すとレポート画面へ移動すること", () => {
-    render(<KeyboardShortcuts />);
+    render(<KeyboardShortcuts enabled />);
 
     press("g");
     press("r");
@@ -148,7 +148,7 @@ describe("G → R: レポートへ", () => {
   });
 
   it("R だけでは移動しないこと", () => {
-    render(<KeyboardShortcuts />);
+    render(<KeyboardShortcuts enabled />);
 
     press("r");
 
@@ -157,7 +157,7 @@ describe("G → R: レポートへ", () => {
 
   it("G から1秒を過ぎた R は無視すること", () => {
     const now = vi.spyOn(Date, "now");
-    render(<KeyboardShortcuts />);
+    render(<KeyboardShortcuts enabled />);
 
     now.mockReturnValue(10_000);
     press("g");
@@ -168,7 +168,7 @@ describe("G → R: レポートへ", () => {
   });
 
   it("G と R の間に別のキーを挟むと移動しないこと", () => {
-    render(<KeyboardShortcuts />);
+    render(<KeyboardShortcuts enabled />);
 
     press("g");
     press("x");
@@ -184,7 +184,7 @@ describe("Space: 計測の開始・停止", () => {
       runningTaskId: "task-1",
       startedAtMs: Date.now(),
     });
-    render(<KeyboardShortcuts />);
+    render(<KeyboardShortcuts enabled />);
 
     press(" ");
 
@@ -200,7 +200,7 @@ describe("Space: 計測の開始・停止", () => {
       ok: true,
       data: { taskId: "task-9", title: "資料作成", startedAtMs: 1_000 },
     });
-    render(<KeyboardShortcuts />);
+    render(<KeyboardShortcuts enabled />);
 
     press(" ");
 
@@ -213,7 +213,7 @@ describe("Space: 計測の開始・停止", () => {
 
   it("再開できるタスクがなければ通知だけ出して開始しないこと", async () => {
     mockResumeLastTimer.mockResolvedValue({ ok: true, data: null });
-    render(<KeyboardShortcuts />);
+    render(<KeyboardShortcuts enabled />);
 
     press(" ");
 
@@ -226,7 +226,7 @@ describe("Space: 計測の開始・停止", () => {
   });
 
   it("ボタンにフォーカスがあるときは、ボタンの標準操作を優先して反応しないこと", () => {
-    render(<KeyboardShortcuts />);
+    render(<KeyboardShortcuts enabled />);
     const button = appendElement("<button>完了</button>");
 
     press(" ", {}, button);
@@ -241,7 +241,7 @@ describe("タスク画面の開閉状態のリセット", () => {
     useTaskPageUiStore.setState({ isCreateOpen: true });
     mockPathname = "/reports";
 
-    render(<KeyboardShortcuts />);
+    render(<KeyboardShortcuts enabled />);
 
     expect(useTaskPageUiStore.getState().isCreateOpen).toBe(false);
   });
@@ -251,7 +251,37 @@ describe("タスク画面の開閉状態のリセット", () => {
     useTaskPageUiStore.setState({ isCreateOpen: true });
     mockPathname = "/tasks";
 
-    render(<KeyboardShortcuts />);
+    render(<KeyboardShortcuts enabled />);
+
+    expect(useTaskPageUiStore.getState().isCreateOpen).toBe(true);
+  });
+});
+
+describe("設定で無効にしているとき", () => {
+  it("どのショートカットにも反応せず、キーの既定の動作も止めないこと", () => {
+    const openSearch = vi.fn();
+    useSearchShortcutStore.getState().registerSearch(openSearch);
+    useTimerStore.setState({ runningTaskId: "task-1", startedAtMs: Date.now() });
+    render(<KeyboardShortcuts enabled={false} />);
+
+    const results = [press("n"), press("f"), press(" "), press("g"), press("r")];
+
+    expect(useTaskPageUiStore.getState().isCreateOpen).toBe(false);
+    expect(openSearch).not.toHaveBeenCalled();
+    expect(mockStopTimer).not.toHaveBeenCalled();
+    expect(mockResumeLastTimer).not.toHaveBeenCalled();
+    expect(mockPush).not.toHaveBeenCalled();
+    // Space でのスクロールなど、ブラウザ標準の動作をそのまま残す
+    expect(results.every((notPrevented) => notPrevented)).toBe(true);
+  });
+
+  it("有効に切り替えると反応するようになること", () => {
+    const { rerender } = render(<KeyboardShortcuts enabled={false} />);
+    press("n");
+    expect(useTaskPageUiStore.getState().isCreateOpen).toBe(false);
+
+    rerender(<KeyboardShortcuts enabled />);
+    press("n");
 
     expect(useTaskPageUiStore.getState().isCreateOpen).toBe(true);
   });
@@ -259,7 +289,7 @@ describe("タスク画面の開閉状態のリセット", () => {
 
 describe("反応しない状況", () => {
   it("文字入力中は N を奪わないこと", () => {
-    render(<KeyboardShortcuts />);
+    render(<KeyboardShortcuts enabled />);
     const textarea = appendElement("<textarea></textarea>");
 
     press("n", {}, textarea);
@@ -268,7 +298,7 @@ describe("反応しない状況", () => {
   });
 
   it("IME 変換中は反応しないこと", () => {
-    render(<KeyboardShortcuts />);
+    render(<KeyboardShortcuts enabled />);
 
     press("n", { isComposing: true });
 
@@ -278,7 +308,7 @@ describe("反応しない状況", () => {
   it("ダイアログ表示中は反応しないこと", () => {
     const openSearch = vi.fn();
     useSearchShortcutStore.getState().registerSearch(openSearch);
-    render(<KeyboardShortcuts />);
+    render(<KeyboardShortcuts enabled />);
     appendElement('<div role="dialog"></div>');
 
     press("n");
@@ -289,7 +319,7 @@ describe("反応しない状況", () => {
   });
 
   it("キーの押しっぱなし（repeat）は無視すること", () => {
-    render(<KeyboardShortcuts />);
+    render(<KeyboardShortcuts enabled />);
 
     press("n", { repeat: true });
 
@@ -297,7 +327,7 @@ describe("反応しない状況", () => {
   });
 
   it("⌘ 以外の修飾キー付きの N は無視すること", () => {
-    render(<KeyboardShortcuts />);
+    render(<KeyboardShortcuts enabled />);
 
     press("n", { altKey: true });
 

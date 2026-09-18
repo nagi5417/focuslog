@@ -40,7 +40,7 @@ export default async function AppLayout({
         }),
         prisma.setting.findUnique({
           where: { userId },
-          select: { theme: true },
+          select: { theme: true, shortcutsEnabled: true },
         }),
       ])
     : [0, null, null];
@@ -61,6 +61,8 @@ export default async function AppLayout({
       hasActiveTimer={Boolean(activeTimer)}
       initialActiveTimer={initialActiveTimer}
       initialTheme={toTheme(setting?.theme)}
+      // 設定が未作成のユーザーは既定（オン）
+      shortcutsEnabled={setting?.shortcutsEnabled ?? true}
     >
       {children}
     </AppShell>

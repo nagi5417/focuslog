@@ -29,9 +29,10 @@ const SEQUENCE_TIMEOUT_MS = 1_000;
  * どれも修飾キーなしにそろえている。⌘F / Ctrl+F などブラウザの操作は奪わない。
  *
  * 文字入力中・IME 変換中・ダイアログ表示中は反応しない。
+ * 設定で無効にしている（enabled=false）ときはキー入力を一切受け付けない。
  * 画面を持たないため何も描画しない。
  */
-export function KeyboardShortcuts() {
+export function KeyboardShortcuts({ enabled }: { enabled: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
   // G を押した時刻（G → R の2段階入力用）
@@ -50,6 +51,9 @@ export function KeyboardShortcuts() {
   }, [pathname]);
 
   useEffect(() => {
+    // 無効ならリスナー自体を登録しない（1文字のキーが誤って反応しないようにする）
+    if (!enabled) return;
+
     function openOnTasksPage(open: () => void) {
       open();
       if (pathname !== TASKS_PATH) router.push(TASKS_PATH);
@@ -133,7 +137,7 @@ export function KeyboardShortcuts() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [pathname, router]);
+  }, [enabled, pathname, router]);
 
   return null;
 }

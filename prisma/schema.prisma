@@ -114,10 +114,13 @@ model TimeEntry {
 }
 
 model Setting {
-  id     String @id @default(cuid())
-  userId String @unique
-  theme  String @default("system")
-  accent String @default("blue")
+  id               String  @id @default(cuid())
+  userId           String  @unique
+  theme            String  @default("system")
+  accent           String  @default("blue")
+  // 1文字のキーボードショートカット（N / F / Space / G R）を使うか。
+  // 音声入力などで誤って反応する人が無効にできるようにする（WCAG 2.1.4）
+  shortcutsEnabled Boolean @default(true)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

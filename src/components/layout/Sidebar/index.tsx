@@ -37,15 +37,19 @@ export function Sidebar({
   user,
   todayTaskCount,
   hasActiveTimer,
+  shortcutsEnabled,
 }: {
   user?: User;
   todayTaskCount: number;
   hasActiveTimer: boolean;
+  // 設定でショートカットを無効にしていたら一覧ごと隠す（効かないキーを表示しないため）
+  shortcutsEnabled: boolean;
 }) {
   const pathname = usePathname();
   const runningTaskId = useTimerStore((state) => state.runningTaskId);
   const stopSeq = useTimerStore((state) => state.stopSeq);
-  const showActiveTimer = Boolean(runningTaskId) || (hasActiveTimer && stopSeq === 0);
+  const showActiveTimer =
+    Boolean(runningTaskId) || (hasActiveTimer && stopSeq === 0);
 
   return (
     <aside
@@ -149,34 +153,38 @@ export function Sidebar({
           );
         })}
 
-        {/* Shortcuts */}
-        <span
-          className="font-mono text-[10px] tracking-[0.08em] uppercase px-[10px] pb-[6px] pt-[8px] mt-[10px]"
-          style={{ color: "var(--fl-text-subtle)" }}
-        >
-          Shortcuts
-        </span>
-        <div className="flex flex-col gap-[8px] px-[10px]">
-          {SHORTCUTS.map(({ label, key }) => (
-            <div
-              key={key}
-              className="flex justify-between items-center text-[11.5px]"
-              style={{ color: "var(--fl-text-muted)" }}
+        {shortcutsEnabled && (
+          <>
+            {/* Shortcuts */}
+            <span
+              className="font-mono text-[10px] tracking-[0.08em] uppercase px-[10px] pb-[6px] pt-[8px] mt-[10px]"
+              style={{ color: "var(--fl-text-subtle)" }}
             >
-              <span>{label}</span>
-              <kbd
-                className="font-mono text-[10.5px] px-[5px] py-[1px] rounded-[4px] border border-b-2"
-                style={{
-                  background: "var(--fl-panel-2)",
-                  borderColor: "var(--fl-border)",
-                  color: "var(--fl-text-muted)",
-                }}
-              >
-                {key}
-              </kbd>
+              Shortcuts
+            </span>
+            <div className="flex flex-col gap-[8px] px-[10px]">
+              {SHORTCUTS.map(({ label, key }) => (
+                <div
+                  key={key}
+                  className="flex justify-between items-center text-[11.5px]"
+                  style={{ color: "var(--fl-text-muted)" }}
+                >
+                  <span>{label}</span>
+                  <kbd
+                    className="font-mono text-[10.5px] px-[5px] py-[1px] rounded-[4px] border border-b-2"
+                    style={{
+                      background: "var(--fl-panel-2)",
+                      borderColor: "var(--fl-border)",
+                      color: "var(--fl-text-muted)",
+                    }}
+                  >
+                    {key}
+                  </kbd>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </>
+        )}
       </nav>
 
       {/* Footer */}

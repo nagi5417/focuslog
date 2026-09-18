@@ -53,6 +53,45 @@ export async function startTimer(
   };
 }
 
+export type ResumedTimer = {
+  taskId: string;
+  title: string;
+  startedAtMs: number;
+};
+
+// 直前に計測していた未完了タスクの計測を再開する（キーボードショートカット Space 用）。
+// 「直前」はキーを押した時点でサーバーに問い合わせて決める。クライアントの記憶に頼ると、
+// 停止後に完了にしたタスクや、別の端末で計測したタスクを正しく扱えないため。
+// 再開できるタスクがなければ data: null を返す。
+export async function resumeLastTimer(): Promise<
+  ActionResult<ResumedTimer | null>
+> {
+  const user = await requireUser();
+
+  const last = await prisma.timeEntry.findFirst({
+    where: {
+      userId: user.id,
+      endedAt: { not: null },
+      task: { is: { userId: user.id, status: { not: "DONE" } } },
+    },
+    orderBy: { startedAt: "desc" },
+    select: { task: { select: { id: true, title: true } } },
+  });
+  if (!last?.task) return { ok: true, data: null };
+
+  const started = await startTimer(last.task.id);
+  if (!started.ok) return started;
+
+  return {
+    ok: true,
+    data: {
+      taskId: last.task.id,
+      title: last.task.title,
+      startedAtMs: started.data.startedAtMs,
+    },
+  };
+}
+
 export async function stopTimer(): Promise<ActionResult> {
   const user = await requireUser();
 

@@ -11,6 +11,7 @@ import {
 import { useTaskActions } from "@/hooks/useTaskActions";
 import { useTimerSync } from "@/hooks/useTimerSync";
 import { useTodayTrackedSec } from "@/hooks/useTodayTrackedSec";
+import { useTaskPageUiStore } from "@/stores/task-page-ui-store";
 import { fmtDate, fmtShort } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import {
@@ -74,8 +75,11 @@ export function TasksPageClient({
     handleUpdated,
     handleDelete,
   } = useTaskActions(initialTasks);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
+  // 作成モーダルと検索欄の開閉はストアで持つ（他画面の N / ⌘K からも開けるようにするため）
+  const isModalOpen = useTaskPageUiStore((s) => s.isCreateOpen);
+  const setIsModalOpen = useTaskPageUiStore((s) => s.setCreateOpen);
+  const searchOpen = useTaskPageUiStore((s) => s.isSearchOpen);
+  const setSearchOpen = useTaskPageUiStore((s) => s.setSearchOpen);
   const [query, setQuery] = useState("");
   const [classificationOptions, setClassificationOptions] = useState(
     initialClassificationOptions,
@@ -96,19 +100,15 @@ export function TasksPageClient({
   // ヘッダーの「計測」は今日実際に計測した時間（タスクの累計時間ではない）
   const todayTrackedSec = useTodayTrackedSec(initialTodayTrackedSec, nowMs);
 
-  // ⌘K / Ctrl+K で検索を開いてフォーカス
+  // 検索欄が開いたら入力欄にフォーカスする。⌘K は KeyboardShortcuts が全画面で受け付け、
+  // ストア経由でここを開く（他画面から遷移してきた場合も同じ経路で開く）
   useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        setSearchOpen(true);
-        // 表示反映後にフォーカス
-        requestAnimationFrame(() => searchRef.current?.focus());
-      }
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+    if (!searchOpen) return;
+    // 検索欄の描画を待ってからフォーカスする
+    const id = requestAnimationFrame(() => searchRef.current?.focus());
+    return () => cancelAnimationFrame(id);
+  }, [searchOpen]);
+
 
   // 検索（タイトル部分一致）と優先度フィルタの AND 条件で絞り込み
   const matches = (t: Task) => {
@@ -332,10 +332,7 @@ export function TasksPageClient({
           ) : (
             <button
               data-testid="task-search-open"
-              onClick={() => {
-                setSearchOpen(true);
-                requestAnimationFrame(() => searchRef.current?.focus());
-              }}
+              onClick={() => setSearchOpen(true)}
               className="flex shrink-0 items-center gap-1.5 h-[30px] px-3 rounded-[7px] border text-[12px] font-[500] text-[var(--fl-text-muted)] hover:bg-[var(--fl-hover)] transition-colors duration-[80ms] cursor-pointer"
               style={{ borderColor: "var(--fl-border)" }}
             >

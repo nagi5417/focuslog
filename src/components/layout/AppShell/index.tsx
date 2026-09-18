@@ -3,6 +3,7 @@ import { TopbarMobile } from "@/components/layout/TopbarMobile";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { TimerBar } from "@/components/layout/TimerBar";
 import { UserSettingSync } from "@/components/layout/UserSettingSync";
+import { KeyboardShortcuts } from "@/components/layout/KeyboardShortcuts";
 
 type User = { name?: string | null; email?: string | null };
 type InitialActiveTimer = {
@@ -35,6 +36,8 @@ export function AppShell({
       style={{ background: "var(--fl-bg)" }}
     >
       <UserSettingSync theme={initialTheme} />
+      {/* 全画面共通のキーボードショートカット（サイドバーの一覧と対応） */}
+      <KeyboardShortcuts />
 
       {/* Sidebar — desktop only, col-1 spans all rows */}
       <div className="hidden md:flex flex-col md:[grid-row:1/-1]">

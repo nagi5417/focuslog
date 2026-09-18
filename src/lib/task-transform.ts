@@ -1,4 +1,10 @@
-import type { Task, Priority, Section, TaskStatus } from "@/types/task";
+import type {
+  DueBucket,
+  Priority,
+  Section,
+  Task,
+  TaskStatus,
+} from "@/types/task";
 
 /**
  * Prisma の Task（timeEntries 同梱）→ フロントの「生値」Task への変換と、
@@ -64,10 +70,26 @@ export function formatDue(dueDate: string | null, nowMs: number): string {
   return `${jstDue.getUTCMonth() + 1}/${String(jstDue.getUTCDate()).padStart(2, "0")}`;
 }
 
-// 今日以前（期限切れ含む）を today に入れる（明日以降・期限なしは other）
-export function toSection(dueDate: string | null, nowMs: number): Section {
-  if (!dueDate) return "other";
-  return new Date(dueDate) <= jstEndOfToday(nowMs) ? "today" : "other";
+// 期限だけでタスクを分類する（完了状態は見ない）。
+// ヘッダーの件数集計は「完了済みも含めて今日期限が何件か」を数えるため、
+// 表示セクション（toSection）とは別にこちらを使う。
+export function toDueBucket(dueDate: string | null, nowMs: number): DueBucket {
+  if (!dueDate) return "undated";
+  const due = new Date(dueDate);
+  if (due < jstStartOfToday(nowMs)) return "overdue";
+  if (due <= jstEndOfToday(nowMs)) return "today";
+  return "upcoming";
+}
+
+// 一覧の表示セクション。完了していれば期限に関係なく done に入れる。
+// セクションを保存せず status と dueDate から都度算出することで、
+// 「完了したら移動」「戻したら元のセクションへ戻る」が自動的に成立する。
+export function toSection(
+  dueDate: string | null,
+  status: TaskStatus,
+  nowMs: number,
+): Section {
+  return isDone(status) ? "done" : toDueBucket(dueDate, nowMs);
 }
 
 // 期限切れ判定: 昨日以前が期限で、かつ未完了のもの（完了済みは強調しない）
@@ -92,6 +114,48 @@ export function isDone(status: TaskStatus): boolean {
   return status === "DONE";
 }
 
+// 未完了セクションの並び順: 期限の近い順 → 優先度の高い順 → 作成日の新しい順。
+// 期限なしは末尾に送る（日付未設定セクション内では実質すべて同値になり優先度順で並ぶ）。
+export function compareByDue(a: Task, b: Task): number {
+  if (a.dueDate !== b.dueDate) {
+    if (!a.dueDate) return 1;
+    if (!b.dueDate) return -1;
+    const diff = new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+    if (diff !== 0) return diff;
+  }
+  if (a.priority !== b.priority) return b.priority - a.priority;
+  return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+}
+
+// 完了セクションの並び順: 完了日時の新しい順。
+// completedAt が無い過去データは createdAt で代替する。
+export function compareByCompletedAt(a: Task, b: Task): number {
+  const at = new Date(a.completedAt ?? a.createdAt).getTime();
+  const bt = new Date(b.completedAt ?? b.createdAt).getTime();
+  return bt - at;
+}
+
+// 全タスクを5セクションへ振り分け、各セクションを上記の規則でソートして返す。
+export function groupBySection(
+  tasks: Task[],
+  nowMs: number,
+): Record<Section, Task[]> {
+  const groups: Record<Section, Task[]> = {
+    overdue: [],
+    today: [],
+    upcoming: [],
+    undated: [],
+    done: [],
+  };
+  for (const task of tasks) {
+    groups[toSection(task.dueDate, task.status, nowMs)].push(task);
+  }
+  for (const key of Object.keys(groups) as Section[]) {
+    groups[key].sort(key === "done" ? compareByCompletedAt : compareByDue);
+  }
+  return groups;
+}
+
 export type PrismaTaskWithEntries = {
   id: string;
   title: string;
@@ -99,6 +163,8 @@ export type PrismaTaskWithEntries = {
   priority: number;
   dueDate: Date | null;
   createdAt: Date;
+  // 既存の呼び出し・テストを壊さないよう任意にする（未指定なら null 扱い）
+  completedAt?: Date | null;
   timeEntries: { durationSec: number | null }[];
   project?: { id: string; name: string; color: string | null } | null;
   tagLinks?: {
@@ -119,6 +185,7 @@ export function toFrontTask(t: PrismaTaskWithEntries): Task {
     status: t.status,
     dueDate: t.dueDate ? t.dueDate.toISOString() : null,
     createdAt: t.createdAt.toISOString(),
+    completedAt: t.completedAt ? t.completedAt.toISOString() : null,
     elapsed,
     project: t.project
       ? { id: t.project.id, name: t.project.name, color: t.project.color }

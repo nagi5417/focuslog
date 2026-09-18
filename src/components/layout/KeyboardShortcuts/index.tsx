@@ -24,8 +24,9 @@ const SEQUENCE_TIMEOUT_MS = 1_000;
  * - N: 新規タスクの作成を開く（タスク画面以外ならタスク画面へ移動して開く）
  * - Space: 計測中なら停止、していなければ直前に計測していた未完了タスクを再開
  * - G → R: レポート画面へ移動（⌘R / Ctrl+R はブラウザの再読み込みなので使わない）
- * - ⌘F / Ctrl+F: 検索欄のある画面でだけ、その画面の検索を開く。検索欄のない画面では
- *   奪わずにブラウザ標準のページ内検索を使えるようにする
+ * - F: 検索欄のある画面でだけ、その画面の検索を開く
+ *
+ * どれも修飾キーなしにそろえている。⌘F / Ctrl+F などブラウザの操作は奪わない。
  *
  * 文字入力中・IME 変換中・ダイアログ表示中は反応しない。
  * 画面を持たないため何も描画しない。
@@ -87,17 +88,6 @@ export function KeyboardShortcuts() {
 
       const key = e.key.toLowerCase();
 
-      // ⌘F / Ctrl+F は、検索欄のある画面が登録しているときだけ奪う。
-      // 登録がなければ preventDefault せず、ブラウザのページ内検索に任せる。
-      // 検索欄への入力中でも受け付ける（開いた検索欄へフォーカスを戻せるように）
-      if ((e.metaKey || e.ctrlKey) && !e.altKey && key === "f") {
-        const openSearch = useSearchShortcutStore.getState().openSearch;
-        if (!openSearch) return;
-        e.preventDefault();
-        openSearch();
-        return;
-      }
-
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (isTypingTarget(e.target)) return;
 
@@ -121,6 +111,16 @@ export function KeyboardShortcuts() {
         openOnTasksPage(() =>
           useTaskPageUiStore.getState().setCreateOpen(true),
         );
+        return;
+      }
+
+      // F は検索欄のある画面が登録しているときだけ受け付ける（登録がなければ何もしない）
+      if (key === "f") {
+        const openSearch = useSearchShortcutStore.getState().openSearch;
+        if (!openSearch) return;
+        // 次のフレームでフォーカスする検索欄に「f」が入力されないよう、既定の動作を止める
+        e.preventDefault();
+        openSearch();
         return;
       }
 

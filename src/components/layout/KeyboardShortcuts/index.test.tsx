@@ -88,57 +88,52 @@ describe("N: 新規タスク", () => {
   });
 });
 
-describe("⌘F / Ctrl+F: 検索", () => {
-  it("検索欄を登録している画面では ⌘F でその画面の検索を開き、ブラウザの検索を止めること", () => {
+describe("F: 検索", () => {
+  it("検索欄を登録している画面では F でその画面の検索を開くこと", () => {
     const openSearch = vi.fn();
     useSearchShortcutStore.getState().registerSearch(openSearch);
     render(<KeyboardShortcuts />);
 
-    const notPrevented = press("f", { metaKey: true });
+    const notPrevented = press("f");
 
     expect(openSearch).toHaveBeenCalledTimes(1);
+    // 開いた検索欄に「f」が入力されないよう既定の動作を止めている
     expect(notPrevented).toBe(false);
   });
 
-  it("Windows の Ctrl+F でも開くこと", () => {
-    const openSearch = vi.fn();
-    useSearchShortcutStore.getState().registerSearch(openSearch);
-    render(<KeyboardShortcuts />);
-
-    press("f", { ctrlKey: true });
-
-    expect(openSearch).toHaveBeenCalledTimes(1);
-  });
-
-  it("検索欄のない画面では ⌘F を奪わず、ブラウザのページ内検索に任せること", () => {
+  it("検索欄のない画面では何もしないこと", () => {
     mockPathname = "/reports";
     render(<KeyboardShortcuts />);
 
-    const notPrevented = press("f", { metaKey: true });
+    const notPrevented = press("f");
 
     expect(notPrevented).toBe(true);
     expect(mockPush).not.toHaveBeenCalled();
   });
 
-  it("検索欄に入力中でも受け付けること（開いた検索欄へフォーカスを戻せるように）", () => {
+  it("検索欄に入力中の F は文字として入力させ、奪わないこと", () => {
     const openSearch = vi.fn();
     useSearchShortcutStore.getState().registerSearch(openSearch);
     render(<KeyboardShortcuts />);
     const input = appendElement('<input type="text" />');
 
-    press("f", { metaKey: true }, input);
+    const notPrevented = press("f", {}, input);
 
-    expect(openSearch).toHaveBeenCalledTimes(1);
+    expect(openSearch).not.toHaveBeenCalled();
+    expect(notPrevented).toBe(true);
   });
 
-  it("修飾キーなしの F は検索を開かないこと", () => {
+  it("⌘F / Ctrl+F はブラウザのページ内検索に任せ、アプリでは扱わないこと", () => {
     const openSearch = vi.fn();
     useSearchShortcutStore.getState().registerSearch(openSearch);
     render(<KeyboardShortcuts />);
 
-    press("f");
+    const notPreventedMac = press("f", { metaKey: true });
+    const notPreventedWin = press("f", { ctrlKey: true });
 
     expect(openSearch).not.toHaveBeenCalled();
+    expect(notPreventedMac).toBe(true);
+    expect(notPreventedWin).toBe(true);
   });
 });
 
@@ -287,7 +282,7 @@ describe("反応しない状況", () => {
     appendElement('<div role="dialog"></div>');
 
     press("n");
-    press("f", { metaKey: true });
+    press("f");
 
     expect(useTaskPageUiStore.getState().isCreateOpen).toBe(false);
     expect(openSearch).not.toHaveBeenCalled();

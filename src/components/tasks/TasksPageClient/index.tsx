@@ -101,8 +101,8 @@ export function TasksPageClient({
   // ヘッダーの「計測」は今日実際に計測した時間（タスクの累計時間ではない）
   const todayTrackedSec = useTodayTrackedSec(initialTodayTrackedSec, nowMs);
 
-  // この画面を表示している間だけ ⌘F / Ctrl+F で検索欄を開けるよう登録する。
-  // KeyboardShortcuts は登録の有無を見て、登録がない画面ではブラウザのページ内検索に任せる。
+  // この画面を表示している間だけ、ショートカット F で検索欄を開けるよう登録する。
+  // KeyboardShortcuts は登録の有無を見て、登録がない画面では何もしない。
   // すでに開いている場合も入力欄へフォーカスを戻す
   useEffect(
     () =>
@@ -350,9 +350,8 @@ export function TasksPageClient({
             >
               <Search size={13} />
               検索
-              {/* Mac は ⌘、Windows は Ctrl。環境で表示を変えず両方を併記する */}
               <kbd className="ml-0.5 hidden sm:inline-flex items-center justify-center h-[16px] px-1 rounded-[3px] border border-[var(--fl-border-strong)] font-mono text-[9px] text-[var(--fl-text-subtle)]">
-                ⌘F / Ctrl+F
+                F
               </kbd>
             </button>
           )}

@@ -15,11 +15,10 @@ const NAV_ITEMS = [
   { href: "/settings", label: "設定", icon: Settings },
 ] as const;
 
-// 実際の処理は KeyboardShortcuts が担う。ここを変えるときは両方をそろえること。
-// 修飾キーは Mac（⌘）と Windows（Ctrl）で異なるため、環境で表示を変えず両方を併記する
+// 実際の処理は KeyboardShortcuts が担う。ここを変えるときは両方をそろえること
 const SHORTCUTS = [
   { label: "新規タスク", key: "N" },
-  { label: "タスクを検索", key: "⌘F / Ctrl+F" },
+  { label: "タスクを検索", key: "F" },
   { label: "計測 開始 / 停止", key: "Space" },
   { label: "レポートへ", key: "G R" },
 ] as const;

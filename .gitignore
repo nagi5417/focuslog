@@ -64,7 +64,5 @@ next-env.d.ts
 /focuslog_design_spec.md
 /focuslog_er_diagram.html
 
-# テスト系（デプロイ純正のため公開しない）
-/tests/
-/vitest.config.ts
-/playwright.config.ts
+# テストポリシー（AI エージェント向けのメモなので公開しない）
+/tests/CLAUDE.md

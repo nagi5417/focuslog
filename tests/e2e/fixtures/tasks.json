@@ -1,0 +1,16 @@
+{
+  "tasks": [
+    {
+      "title": "E2Eテスト用タスク1",
+      "priority": 0
+    },
+    {
+      "title": "E2Eテスト用タスク2",
+      "priority": 2
+    }
+  ],
+  "testUser": {
+    "email": "e2e-test@focuslog.test",
+    "password": "TestPassword123!"
+  }
+}

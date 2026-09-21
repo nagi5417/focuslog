@@ -211,7 +211,9 @@ export function TasksPageClient({
             <span>
               / 完了 {doneCount}件 ({completionPct}%)
             </span>
-            <span>· 計測 {fmtShort(todayTrackedSec)}</span>
+            <span data-testid="today-tracked">
+              · 計測 {fmtShort(todayTrackedSec)}
+            </span>
           </p>
         </div>
         <div className="flex items-center gap-2 sm:mt-0.5">

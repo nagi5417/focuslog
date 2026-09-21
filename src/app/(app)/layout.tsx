@@ -28,10 +28,13 @@ export default async function AppLayout({
 
   const [todayTaskCount, activeTimer, setting] = userId
     ? await Promise.all([
+        // サイドバーのバッジは「やるべき残り」を表す。タスク画面の
+        // 「期限切れ」＋「今日のタスク」セクションの件数と一致させるため、完了済みは数えない
         prisma.task.count({
           where: {
             userId,
             dueDate: { lte: jstEndOfToday(nowMs) },
+            status: { not: "DONE" },
           },
         }),
         prisma.timeEntry.findFirst({

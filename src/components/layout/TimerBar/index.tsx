@@ -34,17 +34,27 @@ export function TimerBar({
     return () => clearInterval(id);
   }, [runningTaskId]);
 
+  // サーバーが持っている計測中のタイマーを復元するのは、ページを開いた最初の一度だけ。
+  //
+  // 以前は initialActiveTimer と runningTaskId を依存に入れていたため、次の順序で
+  // 「停止したのに復活する」不具合が起きていた。
+  //   1. 計測を開始すると revalidatePath で画面が再取得され、initialActiveTimer に
+  //      「計測中」が入った状態で渡ってくる
+  //   2. 停止して runningTaskId が空になる
+  //   3. その変化でこの効果が再び動き、1 の情報でタイマーを復元してしまう
+  // マウント時だけ動かせば、停止後に復元されることはない。
   useEffect(() => {
-    if (hasHydratedInitialTimer.current || runningTaskId || !initialActiveTimer) {
-      return;
-    }
+    if (hasHydratedInitialTimer.current) return;
     hasHydratedInitialTimer.current = true;
+    if (!initialActiveTimer) return;
     start(
       initialActiveTimer.taskId,
       initialActiveTimer.taskTitle,
       initialActiveTimer.startedAtMs,
     );
-  }, [initialActiveTimer, runningTaskId, start]);
+    // 初回マウント時のみ実行
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const elapsed = runningTaskId ? getElapsed() : 0;
 

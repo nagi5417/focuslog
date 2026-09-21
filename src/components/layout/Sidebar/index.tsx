@@ -126,6 +126,7 @@ export function Sidebar({
                       ? "var(--fl-brand)"
                       : "var(--fl-text-subtle)",
                   }}
+                  data-testid="sidebar-task-count"
                 >
                   {todayTaskCount}
                 </span>

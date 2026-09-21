@@ -2,6 +2,7 @@
 
 import { AccountSettings } from "@/components/settings/AccountSettings";
 import { AccentSelector } from "@/components/settings/AccentSelector";
+import { ShortcutSettings } from "@/components/settings/ShortcutSettings";
 import { ThemeSelector } from "@/components/settings/ThemeSelector";
 
 type User = {
@@ -13,6 +14,7 @@ type Props = {
   setting: {
     theme: string;
     accent: string;
+    shortcutsEnabled: boolean;
   };
   user: User;
 };
@@ -55,6 +57,15 @@ export function SettingsPageClient({ setting, user }: Props) {
               </div>
               <AccentSelector />
             </div>
+          </div>
+        </section>
+
+        <section className="flex flex-col gap-3">
+          <h2 className="font-mono text-[11px] uppercase tracking-[0.08em] text-[var(--fl-text-subtle)]">
+            操作
+          </h2>
+          <div className="rounded-[9px] border border-[var(--fl-border)] bg-[var(--fl-panel)]">
+            <ShortcutSettings initialEnabled={setting.shortcutsEnabled} />
           </div>
         </section>
 

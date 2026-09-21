@@ -17,39 +17,44 @@ export default async function TasksPage() {
   const todayStart = jstStartOfToday(nowMs);
   const tomorrowStart = new Date(todayStart.getTime() + ONE_DAY_MS);
 
-  const [dbTasks, activeEntry, classificationOptions, todayTracked] =
+  const [dbTasks, activeEntry, classificationOptions, todayTracked, setting] =
     await Promise.all([
-    prisma.task.findMany({
-      where: { userId: user.id },
-      orderBy: { createdAt: "desc" },
-      include: {
-        project: { select: { id: true, name: true, color: true } },
-        tagLinks: {
-          include: { tag: { select: { id: true, name: true, color: true } } },
-          orderBy: { tag: { name: "asc" } },
+      prisma.task.findMany({
+        where: { userId: user.id },
+        orderBy: { createdAt: "desc" },
+        include: {
+          project: { select: { id: true, name: true, color: true } },
+          tagLinks: {
+            include: { tag: { select: { id: true, name: true, color: true } } },
+            orderBy: { tag: { name: "asc" } },
+          },
+          timeEntries: {
+            where: { endedAt: { not: null } },
+            select: { durationSec: true },
+          },
         },
-        timeEntries: {
-          where: { endedAt: { not: null } },
-          select: { durationSec: true },
+      }),
+      prisma.timeEntry.findFirst({
+        where: { userId: user.id, endedAt: null },
+      }),
+      getTaskClassificationOptions(),
+      // 今日の計測時間（停止済み分）。レポート画面と同じく開始時刻が今日の記録を数える。
+      // 計測中のタイマーは endedAt が null なので含まれず、クライアント側で経過時間を足す。
+      prisma.timeEntry.aggregate({
+        where: {
+          userId: user.id,
+          endedAt: { not: null },
+          durationSec: { not: null },
+          startedAt: { gte: todayStart, lt: tomorrowStart },
         },
-      },
-    }),
-    prisma.timeEntry.findFirst({
-      where: { userId: user.id, endedAt: null },
-    }),
-    getTaskClassificationOptions(),
-    // 今日の計測時間（停止済み分）。レポート画面と同じく開始時刻が今日の記録を数える。
-    // 計測中のタイマーは endedAt が null なので含まれず、クライアント側で経過時間を足す。
-    prisma.timeEntry.aggregate({
-      where: {
-        userId: user.id,
-        endedAt: { not: null },
-        durationSec: { not: null },
-        startedAt: { gte: todayStart, lt: tomorrowStart },
-      },
-      _sum: { durationSec: true },
-    }),
-  ]);
+        _sum: { durationSec: true },
+      }),
+      // 検索ボタンのショートカット表示（F）を、設定で無効なら出さないため
+      prisma.setting.findUnique({
+        where: { userId: user.id },
+        select: { shortcutsEnabled: true },
+      }),
+    ]);
 
   const tasks: Task[] = dbTasks.map(toFrontTask);
 
@@ -66,6 +71,7 @@ export default async function TasksPage() {
       initialActiveTimer={initialActiveTimer}
       initialClassificationOptions={classificationOptions}
       initialTodayTrackedSec={todayTracked._sum.durationSec ?? 0}
+      shortcutsEnabled={setting?.shortcutsEnabled ?? true}
       nowMs={nowMs}
     />
   );

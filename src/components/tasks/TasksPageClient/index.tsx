@@ -11,6 +11,8 @@ import {
 import { useTaskActions } from "@/hooks/useTaskActions";
 import { useTimerSync } from "@/hooks/useTimerSync";
 import { useTodayTrackedSec } from "@/hooks/useTodayTrackedSec";
+import { useSearchShortcutStore } from "@/stores/search-shortcut-store";
+import { useTaskPageUiStore } from "@/stores/task-page-ui-store";
 import { fmtDate, fmtShort } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import {
@@ -37,6 +39,8 @@ type Props = {
   initialClassificationOptions: TaskClassificationOptions;
   // 今日開始・停止済みの計測時間（秒）。サーバーで集計した値
   initialTodayTrackedSec: number;
+  // 設定でショートカットを無効にしていたら、検索ボタンのキー表示（F）を出さない
+  shortcutsEnabled: boolean;
   nowMs: number;
 };
 
@@ -60,6 +64,7 @@ export function TasksPageClient({
   initialActiveTimer,
   initialClassificationOptions,
   initialTodayTrackedSec,
+  shortcutsEnabled,
   nowMs,
 }: Props) {
   const {
@@ -74,8 +79,11 @@ export function TasksPageClient({
     handleUpdated,
     handleDelete,
   } = useTaskActions(initialTasks);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // 作成モーダルの開閉はストアで持つ（他画面の N からも開けるようにするため）
+  const isModalOpen = useTaskPageUiStore((s) => s.isCreateOpen);
+  const setIsModalOpen = useTaskPageUiStore((s) => s.setCreateOpen);
   const [searchOpen, setSearchOpen] = useState(false);
+  const registerSearch = useSearchShortcutStore((s) => s.registerSearch);
   const [query, setQuery] = useState("");
   const [classificationOptions, setClassificationOptions] = useState(
     initialClassificationOptions,
@@ -96,19 +104,26 @@ export function TasksPageClient({
   // ヘッダーの「計測」は今日実際に計測した時間（タスクの累計時間ではない）
   const todayTrackedSec = useTodayTrackedSec(initialTodayTrackedSec, nowMs);
 
-  // ⌘K / Ctrl+K で検索を開いてフォーカス
-  useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
+  // この画面を表示している間だけ、ショートカット F で検索欄を開けるよう登録する。
+  // KeyboardShortcuts は登録の有無を見て、登録がない画面では何もしない。
+  // すでに開いている場合も入力欄へフォーカスを戻す
+  useEffect(
+    () =>
+      registerSearch(() => {
         setSearchOpen(true);
-        // 表示反映後にフォーカス
         requestAnimationFrame(() => searchRef.current?.focus());
-      }
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+      }),
+    [registerSearch],
+  );
+
+  // 検索ボタンなどで検索欄が開いたら入力欄にフォーカスする
+  useEffect(() => {
+    if (!searchOpen) return;
+    // 検索欄の描画を待ってからフォーカスする
+    const id = requestAnimationFrame(() => searchRef.current?.focus());
+    return () => cancelAnimationFrame(id);
+  }, [searchOpen]);
+
 
   // 検索（タイトル部分一致）と優先度フィルタの AND 条件で絞り込み
   const matches = (t: Task) => {
@@ -196,7 +211,9 @@ export function TasksPageClient({
             <span>
               / 完了 {doneCount}件 ({completionPct}%)
             </span>
-            <span>· 計測 {fmtShort(todayTrackedSec)}</span>
+            <span data-testid="today-tracked">
+              · 計測 {fmtShort(todayTrackedSec)}
+            </span>
           </p>
         </div>
         <div className="flex items-center gap-2 sm:mt-0.5">
@@ -332,18 +349,17 @@ export function TasksPageClient({
           ) : (
             <button
               data-testid="task-search-open"
-              onClick={() => {
-                setSearchOpen(true);
-                requestAnimationFrame(() => searchRef.current?.focus());
-              }}
+              onClick={() => setSearchOpen(true)}
               className="flex shrink-0 items-center gap-1.5 h-[30px] px-3 rounded-[7px] border text-[12px] font-[500] text-[var(--fl-text-muted)] hover:bg-[var(--fl-hover)] transition-colors duration-[80ms] cursor-pointer"
               style={{ borderColor: "var(--fl-border)" }}
             >
               <Search size={13} />
               検索
-              <kbd className="ml-0.5 hidden sm:inline-flex items-center justify-center h-[16px] px-1 rounded-[3px] border border-[var(--fl-border-strong)] font-mono text-[9px] text-[var(--fl-text-subtle)]">
-                ⌘K
-              </kbd>
+              {shortcutsEnabled && (
+                <kbd className="ml-0.5 hidden sm:inline-flex items-center justify-center h-[16px] px-1 rounded-[3px] border border-[var(--fl-border-strong)] font-mono text-[9px] text-[var(--fl-text-subtle)]">
+                  F
+                </kbd>
+              )}
             </button>
           )}
 

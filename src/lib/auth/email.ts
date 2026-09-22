@@ -1,18 +1,44 @@
+import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { Resend } from "resend";
 
-// メール送信ユーティリティ。RESEND_API_KEY 未設定（ローカル開発）の場合は
-// 実送信せずリンクをサーバーコンソールに出力し、登録〜確認フローを手元で完走できるようにする。
+// 送信方式は環境変数で切り替える。
+//   MAIL_PROVIDER=ses    → 本番(AWS)。IAM ロール認証のため API キー不要
+//   MAIL_PROVIDER=resend → SES の審査待ち・障害時のフォールバック
+//   未設定 かつ RESEND_API_KEY なし → ローカル開発。コンソールに出力するだけ
+const provider = process.env.MAIL_PROVIDER;
 const apiKey = process.env.RESEND_API_KEY;
-// 送信元アドレス。検証済み独自ドメインを使う本番では EMAIL_FROM で上書きする。
-// 未設定時は Resend のテスト共有ドメインにフォールバックする
-// （※このドメインは Resend アカウント所有者本人のメール宛にしか送れない）。
 const FROM = process.env.EMAIL_FROM ?? "FocusLog <onboarding@resend.dev>";
+
+// クライアントはコールドスタート時に1度だけ作り、以降の呼び出しで使い回す。
+// 認証情報とリージョンは Lambda の実行ロールと AWS_REGION から自動解決される。
+let sesClient: SESv2Client | undefined;
+function getSesClient(): SESv2Client {
+  sesClient ??= new SESv2Client({});
+  return sesClient;
+}
 
 async function sendMail(
   to: string,
   subject: string,
   html: string,
 ): Promise<void> {
+  if (provider === "ses") {
+    // 日本語の件名・本文が文字化けしないよう Charset を明示する。
+    await getSesClient().send(
+      new SendEmailCommand({
+        FromEmailAddress: FROM,
+        Destination: { ToAddresses: [to] },
+        Content: {
+          Simple: {
+            Subject: { Data: subject, Charset: "UTF-8" },
+            Body: { Html: { Data: html, Charset: "UTF-8" } },
+          },
+        },
+      }),
+    );
+    return;
+  }
+
   if (!apiKey) {
     console.info(
       `\n[dev mail] 宛先: ${to}\n件名: ${subject}\n本文:\n${html}\n`,

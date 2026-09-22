@@ -1,0 +1,17 @@
+node_modules
+.next
+.git
+.github
+infra
+docs
+tasks
+study
+tests
+test-results
+playwright-report
+coverage
+.env*
+*.tsbuildinfo
+.claude
+.codex
+.agents

@@ -1,3 +1,6 @@
-ignoredBuiltDependencies:
-  - sharp
-  - unrs-resolver
+# ビルドスクリプト（preinstall/install/postinstall）の実行を許可するパッケージの
+# 明示的な許可リスト。ここに無いパッケージのビルドスクリプトは実行されない。
+# 空配列は「どのパッケージも承認しない」という明示的な意思表示になり、
+# `pnpm install --frozen-lockfile`（CI/Docker向けの厳格モード）でも
+# 「未レビューのビルドスクリプトがある」というエラーを起こさなくなる。
+onlyBuiltDependencies: []

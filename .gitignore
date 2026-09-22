@@ -2,7 +2,11 @@
 
 # dependencies
 /node_modules
+/infra/node_modules
 /.pnp
+
+# CDK の合成結果（ビルド成果物。cdk synth/deploy のたびに再生成される）
+/infra/cdk.out
 .pnp.*
 .yarn/*
 !.yarn/patches

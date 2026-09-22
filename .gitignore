@@ -50,6 +50,8 @@ next-env.d.ts
 
 # 学習用メモ
 /study
+# akapen（赤ペン確認シート。個人の作業用で公開しない）
+/akapen
 
 # AI エージェント系（公開しない）
 /.agents/

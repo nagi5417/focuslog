@@ -2,5 +2,11 @@
   "hosted-zone:account=949750748774:domainName=focuslog.dev:region=us-east-1": {
     "Id": "/hostedzone/Z04184641C2LBBR8K6HEA",
     "Name": "focuslog.dev."
-  }
+  },
+  "availability-zones:account=949750748774:region=ap-northeast-1": [
+    "ap-northeast-1a",
+    "ap-northeast-1c",
+    "ap-northeast-1d"
+  ],
+  "ami:account=949750748774:filters.image-type.0=machine:filters.name.0=fck-nat-al2023-*-arm64-ebs:filters.state.0=available:owners.0=568608671756:region=ap-northeast-1": "ami-0f9ddfb8b5a6a11d2"
 }

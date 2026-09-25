@@ -1,17 +1,19 @@
 #!/usr/bin/env node
 import { App } from "aws-cdk-lib";
-import { PlaceholderStack } from "../lib/placeholder-stack";
+import { CertStack } from "../lib/cert-stack";
 
-// Phase 2 時点ではまだ本物のスタックを定義していない。
-// `cdk bootstrap` はアプリ内にスタックが1つ以上ないと実行できないため、
-// リソースを持たない PlaceholderStack だけを登録しておく。
-// 各スタックは Phase 3 以降でここに追加し、PlaceholderStack は最終的に外す。
+// 以降のフェーズで使うスタックも、この定数を通じて同じドメイン名を参照する。
+const DOMAIN_NAME = "focuslog.dev";
+
 const app = new App();
 
-new PlaceholderStack(app, "FocuslogPlaceholder", {
+// CloudFront に付ける証明書は us-east-1 でしか発行できないため、
+// アプリ本体（ap-northeast-1）とはリージョンを分けている（Phase 3）。
+new CertStack(app, "FocuslogCert", {
+  domainName: DOMAIN_NAME,
   env: {
     account: process.env.CDK_DEFAULT_ACCOUNT,
-    region: process.env.CDK_DEFAULT_REGION,
+    region: "us-east-1",
   },
 });
 

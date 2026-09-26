@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # package.json の packageManager フィールド(pnpm@10.30.2)からバージョンを自動検出させる。
+      # version を明示すると packageManager と二重指定になり、pnpm/action-setup が
+      # "Multiple versions of pnpm specified" で失敗する。
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      # postinstall で prisma generate が走るため、この時点で Prisma Client が生成される
+      - run: pnpm install --frozen-lockfile
+
+      - name: 型チェック
+        run: npx tsc --noEmit
+
+      - name: リント
+        run: pnpm lint
+
+      - name: ユニットテスト
+        run: pnpm test run

@@ -42,6 +42,11 @@ jobs:
           build-args: |
             APP_DOMAIN=${{ vars.APP_DOMAIN }}
             DEPLOYMENT_ID=${{ github.sha }}
+          # 既定だと provenance/attestation 付きの OCI イメージインデックスになり、
+          # Lambda が "image manifest ... is not supported" で拒否する(Phase 6で踏んだ失敗と同じ)。
+          # Lambda が要求する単一マニフェスト形式にするため両方 false にする。
+          provenance: false
+          sbom: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

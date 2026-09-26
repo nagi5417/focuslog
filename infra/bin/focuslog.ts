@@ -1,40 +1,50 @@
 #!/usr/bin/env node
-import { App } from "aws-cdk-lib";
+import * as cdk from "aws-cdk-lib";
+import { AppStack } from "../lib/app-stack";
 import { CertStack } from "../lib/cert-stack";
 import { DataStack } from "../lib/data-stack";
 import { NetworkStack } from "../lib/network-stack";
 
-// 以降のフェーズで使うスタックも、この定数を通じて同じドメイン名を参照する。
-const DOMAIN_NAME = "focuslog.dev";
-// スタックをまたいで参照するリソース（vpc / dbSg 等）は、この定数を通じて
-// 東京リージョンのスタック同士でだけやり取りする（CertStack は us-east-1 で独立）。
-const APP_ENV = {
-  account: process.env.CDK_DEFAULT_ACCOUNT,
-  region: "ap-northeast-1",
-};
+const app = new cdk.App();
 
-const app = new App();
+const account = process.env.CDK_DEFAULT_ACCOUNT;
+// -c domainName=... / -c imageTag=... で渡す。未指定時は focuslog.dev を既定にする
+// （Phase 3 で取得したドメイン。手順書の <DOMAIN> に対応）。
+const domainName = app.node.tryGetContext("domainName") ?? "focuslog.dev";
+const imageTag = app.node.tryGetContext("imageTag") ?? "latest";
 
-// CloudFront に付ける証明書は us-east-1 でしか発行できないため、
-// アプリ本体（ap-northeast-1）とはリージョンを分けている（Phase 3）。
-new CertStack(app, "FocuslogCert", {
-  domainName: DOMAIN_NAME,
-  env: {
-    account: process.env.CDK_DEFAULT_ACCOUNT,
-    region: "us-east-1",
-  },
+const tokyo = { account, region: "ap-northeast-1" };
+const virginia = { account, region: "us-east-1" };
+
+// 証明書だけ us-east-1（CloudFront の要件）。
+const cert = new CertStack(app, "FocuslogCert", {
+  env: virginia,
+  domainName,
+  crossRegionReferences: true, // 別リージョンのスタックから参照するために必要
 });
 
-// Lambda と Aurora を置く VPC（Phase 4）。アプリ本体は東京リージョン。
-const network = new NetworkStack(app, "FocuslogNetwork", {
-  env: APP_ENV,
-});
+const network = new NetworkStack(app, "FocuslogNetwork", { env: tokyo });
 
-// Aurora Serverless v2（Phase 5）。NetworkStack が作った VPC・SG の中に置く。
-new DataStack(app, "FocuslogData", {
-  env: APP_ENV,
+const data = new DataStack(app, "FocuslogData", {
+  env: tokyo,
   vpc: network.vpc,
   dbSg: network.dbSg,
 });
 
-app.synth();
+new AppStack(app, "FocuslogApp", {
+  env: tokyo,
+  crossRegionReferences: true,
+  vpc: network.vpc,
+  lambdaSg: network.lambdaSg,
+  cluster: data.cluster,
+  certificate: cert.certificate,
+  domainName,
+  imageTag,
+});
+
+// Phase 11 で作る CI/CD 用スタック。ここまでの Phase では未作成でよい。
+// new CicdStack(app, "FocuslogCicd", {
+//   env: tokyo,
+//   githubOwner: "<GITHUB_OWNER>",
+//   githubRepo: "<GITHUB_REPO>",
+// });

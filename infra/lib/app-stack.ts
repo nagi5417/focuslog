@@ -1,5 +1,8 @@
 import * as cdk from "aws-cdk-lib";
 import * as acm from "aws-cdk-lib/aws-certificatemanager";
+import * as apigwv2 from "aws-cdk-lib/aws-apigatewayv2";
+import * as apigwv2authorizers from "aws-cdk-lib/aws-apigatewayv2-authorizers";
+import * as apigwv2integrations from "aws-cdk-lib/aws-apigatewayv2-integrations";
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
 import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
@@ -9,6 +12,7 @@ import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as route53 from "aws-cdk-lib/aws-route53";
 import * as targets from "aws-cdk-lib/aws-route53-targets";
 import * as rds from "aws-cdk-lib/aws-rds";
+import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { Construct } from "constructs";
@@ -29,17 +33,6 @@ export class AppStack extends cdk.Stack {
     const repo = ecr.Repository.fromRepositoryName(this, "Repo", "focuslog");
     const dbSecret = props.cluster.secret!;
 
-    const commonEnv = {
-      SSM_PARAM_PATH: "/focuslog/prod/",
-      DB_SECRET_ARN: dbSecret.secretArn,
-    };
-
-    const commonVpc = {
-      vpc: props.vpc,
-      vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
-      securityGroups: [props.lambdaSg],
-    };
-
     // ---- アプリ本体の Lambda ----
     const webFn = new lambda.DockerImageFunction(this, "Web", {
       code: lambda.DockerImageCode.fromEcr(repo, {
@@ -50,8 +43,19 @@ export class AppStack extends cdk.Stack {
       // 1リクエストの処理上限。CloudFront 側(30秒)より短くして、
       // タイムアウト時にどちらの層で切れたか判別できるようにする。
       timeout: cdk.Duration.seconds(25),
-      environment: { ...commonEnv, AWS_LWA_INVOKE_MODE: "response_stream" },
-      ...commonVpc,
+      environment: {
+        SSM_PARAM_PATH: "/focuslog/prod/",
+        DB_SECRET_ARN: dbSecret.secretArn,
+        // Dockerfile が ENV でイメージに焼き込んでいる response_stream を関数レベルで上書きする。
+        // レスポンスストリーミングは Lambda Function URL 経由でしか成立せず、API Gateway 経由の
+        // 呼び出しでは Lambda がストリーミング用のレスポンス形式を返してしまい、API Gateway 側が
+        // 解釈できず 500 になる。関数の環境変数はイメージの ENV より優先されるため、ここで
+        // 明示的に "buffered"(既定の一括レスポンス)に戻す必要がある。
+        AWS_LWA_INVOKE_MODE: "buffered",
+      },
+      vpc: props.vpc,
+      vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
+      securityGroups: [props.lambdaSg],
     });
 
     dbSecret.grantRead(webFn);
@@ -71,10 +75,39 @@ export class AppStack extends cdk.Stack {
       }),
     );
 
-    const fnUrl = webFn.addFunctionUrl({
-      // 誰でも叩ける状態にせず、CloudFront からの署名付きリクエストだけ通す。
-      authType: lambda.FunctionUrlAuthType.AWS_IAM,
-      invokeMode: lambda.InvokeMode.RESPONSE_STREAM,
+    // ---- CloudFront ↔ API Gateway 間の合言葉 ----
+    // OAC(署名検証)は S3 と Lambda Function URL 向けの自動設定しか無く、API Gateway には
+    // 使えない。代わりに CloudFront がカスタムヘッダーへ合言葉を載せ、API Gateway の前段の
+    // 認可用 Lambda(Authorizer)でその値を検証する。カスタムオリジンヘッダーは同名の
+    // ビューアーヘッダーを常に上書きして転送されるため、この合言葉は外部から偽装できない。
+    // synth のたびに値が変わるため、デプロイのたびに自動でローテーションされる副次効果もある。
+    const originVerifySecret = crypto.randomBytes(24).toString("hex");
+
+    const authorizerFn = new lambda.Function(this, "OriginVerifyAuthorizer", {
+      runtime: lambda.Runtime.NODEJS_22_X,
+      handler: "index.handler",
+      code: lambda.Code.fromInline(`
+        exports.handler = async (event) => ({
+          isAuthorized: event.headers?.["x-origin-verify"] === process.env.SECRET,
+        });
+      `),
+      environment: { SECRET: originVerifySecret },
+      timeout: cdk.Duration.seconds(3),
+    });
+
+    const httpApi = new apigwv2.HttpApi(this, "Api", {
+      defaultIntegration: new apigwv2integrations.HttpLambdaIntegration(
+        "WebIntegration",
+        webFn,
+      ),
+      defaultAuthorizer: new apigwv2authorizers.HttpLambdaAuthorizer(
+        "OriginVerify",
+        authorizerFn,
+        {
+          responseTypes: [apigwv2authorizers.HttpLambdaResponseType.SIMPLE],
+          identitySource: ["$request.header.x-origin-verify"],
+        },
+      ),
     });
 
     // ---- CloudFront ----
@@ -88,8 +121,13 @@ export class AppStack extends cdk.Stack {
       runtime: cloudfront.FunctionRuntime.JS_2_0,
     });
 
-    // OAC 付きのオリジン。CloudFront が SigV4 で署名し、Lambda 側は IAM で検証する。
-    const origin = origins.FunctionUrlOrigin.withOriginAccessControl(fnUrl);
+    // apiEndpoint は "https://xxxx.execute-api.<region>.amazonaws.com" というトークン文字列。
+    // HttpOrigin はホスト名のみを要求するため "/" 分割の3番目の要素(index 2)を取り出す。
+    const apiHost = cdk.Fn.select(2, cdk.Fn.split("/", httpApi.apiEndpoint));
+
+    const origin = new origins.HttpOrigin(apiHost, {
+      customHeaders: { "x-origin-verify": originVerifySecret },
+    });
 
     const distribution = new cloudfront.Distribution(this, "Cdn", {
       domainNames: [props.domainName],
@@ -101,7 +139,8 @@ export class AppStack extends cdk.Stack {
         allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
         // 動的ページはユーザーごとに内容が違うのでキャッシュしない。
         cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
-        // Host ヘッダを転送すると OAC の署名が壊れるため、Host だけ除外する専用ポリシーを使う。
+        // Host ヘッダをオリジンにそのまま転送すると API Gateway 側のドメインと不一致になるため、
+        // Host だけ除外する専用ポリシーを使う(実ホスト名は forward-host.js が別ヘッダーで運ぶ)。
         originRequestPolicy:
           cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
         functionAssociations: [
@@ -122,17 +161,6 @@ export class AppStack extends cdk.Stack {
       },
     });
 
-    // FunctionUrlOrigin.withOriginAccessControl() が自動付与するのは
-    // lambda:InvokeFunctionUrl の権限のみ。2025年10月以降、AWS 側の要件として
-    // CloudFront からの OAC 経由アクセスには lambda:InvokeFunction も別途必要になっており、
-    // これが無いと CloudFront 経由のリクエストが「Forbidden」で拒否される。
-    // https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-restricting-access-to-lambda.html
-    webFn.addPermission("AllowCloudFrontInvoke", {
-      principal: new iam.ServicePrincipal("cloudfront.amazonaws.com"),
-      action: "lambda:InvokeFunction",
-      sourceArn: `arn:aws:cloudfront::${this.account}:distribution/${distribution.distributionId}`,
-    });
-
     // ---- DNS ----
     const zone = route53.HostedZone.fromLookup(this, "Zone", {
       domainName: props.domainName,
@@ -148,5 +176,6 @@ export class AppStack extends cdk.Stack {
     new cdk.CfnOutput(this, "DistributionDomain", {
       value: distribution.distributionDomainName,
     });
+    new cdk.CfnOutput(this, "ApiEndpoint", { value: httpApi.apiEndpoint });
   }
 }

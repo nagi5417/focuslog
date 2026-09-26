@@ -2,6 +2,7 @@
 import * as cdk from "aws-cdk-lib";
 import { AppStack } from "../lib/app-stack";
 import { CertStack } from "../lib/cert-stack";
+import { CicdStack } from "../lib/cicd-stack";
 import { DataStack } from "../lib/data-stack";
 import { NetworkStack } from "../lib/network-stack";
 
@@ -42,9 +43,8 @@ new AppStack(app, "FocuslogApp", {
   imageTag,
 });
 
-// Phase 11 で作る CI/CD 用スタック。ここまでの Phase では未作成でよい。
-// new CicdStack(app, "FocuslogCicd", {
-//   env: tokyo,
-//   githubOwner: "<GITHUB_OWNER>",
-//   githubRepo: "<GITHUB_REPO>",
-// });
+new CicdStack(app, "FocuslogCicd", {
+  env: tokyo,
+  githubOwner: "nagi5417",
+  githubRepo: "focuslog",
+});

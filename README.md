@@ -42,7 +42,6 @@ https://focuslog.dev を開き、以下のデモ用アカウントでログイ�
 ## AWS 構成
 
 ```mermaid
-%%{init: {"flowchart": {"htmlLabels": false}}}%%
 flowchart LR
     user(["ブラウザ"])
     gha["GitHub Actions"]
@@ -51,17 +50,17 @@ flowchart LR
     subgraph aws["AWS（東京リージョン）"]
         cf["CloudFront<br/>CDN・HTTPS"]
         apigw["API Gateway<br/>HTTP API"]
-        authz["認可用 Lambda<br/>CloudFront 経由かを検証"]
-        ecr["ECR<br/>コンテナイメージ"]
+        authz["認可用 Lambda"]
+        ecr["ECR<br/>イメージ"]
         conf["SSM Parameter Store<br/>Secrets Manager"]
         ses["SES<br/>メール送信"]
 
         subgraph vpc["VPC"]
             subgraph pub["パブリックサブネット"]
-                nat["NAT インスタンス<br/>t4g.nano"]
+                nat["NAT instance<br/>t4g.nano"]
             end
             subgraph pri["プライベートサブネット"]
-                web["Lambda<br/>Next.js コンテナ"]
+                web["Lambda<br/>Next.js"]
             end
             subgraph iso["隔離サブネット"]
                 db[("Aurora Serverless v2<br/>PostgreSQL 16")]
@@ -70,7 +69,7 @@ flowchart LR
     end
 
     user -->|HTTPS| cf --> apigw --> web --> db
-    apigw -.- authz
+    apigw -. 合言葉を検証 .- authz
     web --> nat
     nat --> ses
     nat --> google

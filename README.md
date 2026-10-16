@@ -42,6 +42,7 @@ https://focuslog.dev を開き、以下のデモ用アカウントでログイ�
 ## AWS 構成
 
 ```mermaid
+%%{init: {"flowchart": {"htmlLabels": false}}}%%
 flowchart LR
     user(["ブラウザ"])
     gha["GitHub Actions"]

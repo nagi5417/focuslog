@@ -3,6 +3,10 @@ name: Deploy
 on:
   push:
     branches: [main]
+    # README などドキュメントだけの変更では本番に反映するものが無いため、デプロイしない。
+    # コードと一緒に変更された場合は通常どおり実行される。
+    paths-ignore:
+      - "**.md"
 
 # OIDC トークンの発行に必要
 permissions:
@@ -27,6 +31,13 @@ jobs:
 
       - uses: aws-actions/amazon-ecr-login@v2
         id: ecr
+
+      # Dockerfile が取得する public.ecr.aws（Lambda Web Adapter）にもログインしておく。
+      # 匿名だと IP アドレスごとの転送量上限があり、IP を共有する GitHub Actions のランナーでは
+      # 他人の利用分で "429 Too Many Requests: Data limit exceeded" になることがある。
+      - uses: aws-actions/amazon-ecr-login@v2
+        with:
+          registry-type: public
 
       # arm64 のイメージを x86 のランナーで作るため QEMU を使う
       - uses: docker/setup-qemu-action@v3

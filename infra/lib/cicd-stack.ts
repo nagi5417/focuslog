@@ -56,6 +56,18 @@ export class CicdStack extends cdk.Stack {
         resources: ["*"],
       }),
     );
+    // Dockerfile が取得する public.ecr.aws（Lambda Web Adapter）にログインするための権限。
+    // 匿名での取得は IP アドレスごとの転送量上限があり、利用者間で IP を共有する
+    // GitHub Actions のランナーでは他人の利用分で上限に達して 429 になることがある。
+    role.addToPolicy(
+      new iam.PolicyStatement({
+        actions: [
+          "ecr-public:GetAuthorizationToken",
+          "sts:GetServiceBearerToken",
+        ],
+        resources: ["*"],
+      }),
+    );
 
     new cdk.CfnOutput(this, "DeployRoleArn", { value: role.roleArn });
   }
